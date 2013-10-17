@@ -55,6 +55,7 @@ public:
         return m_currImg;
     }
 
+    // Any parameters that need to be set here?
     void SetParam( paramType param, float value );
 
     const TrackHistory::TrackLog& GetHistory() const
@@ -100,6 +101,15 @@ public:
     }
 
 private:
+    int largest_polygon(std::vector<std::vector<cv::Point2i> > & polygons);
+
+    void segment_blobs(const cv::Mat & input_image,
+        std::vector<std::vector<cv::Point2i> > * contours, double hue_ref,
+        double hue_thr, double sat_thr);
+
+    cv::Point2f find_blob(const cv::Mat & input_image, double hue_ref,
+        double hue_thr, double sat_thr);
+
     cv::Point2f m_pos;
     float m_angle;
 
