@@ -52,7 +52,7 @@ public:
 
     const IplImage * GetCurrentImage() const
     {
-        return m_currImg;
+        return m_legacy_img;
     }
 
     // Any parameters that need to be set here?
@@ -70,7 +70,8 @@ public:
 
     void SetCurrentImage( const IplImage *const pImg )
     {
-        m_currImg = pImg;
+        m_legacy_img = pImg;
+        m_currImg = cv::Mat(m_legacy_img);
     }
 
     void Activate();
@@ -101,6 +102,7 @@ public:
     }
 
 private:
+
     int largest_polygon(std::vector<std::vector<cv::Point2i> > & polygons);
 
     void segment_blobs(const cv::Mat & input_image,
@@ -115,7 +117,8 @@ private:
 
     float m_error; // Keep this?
 
-    IplImage * m_currImg;
+    cv::Mat m_currImg;
+    const IplImage * m_legacy_img;
 
     TrackHistory::TrackLog m_history;
 

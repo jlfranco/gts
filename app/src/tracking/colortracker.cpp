@@ -1,5 +1,16 @@
 #include "colortracker.h"
 
+#include "ColorCalibration.h"
+#include "CameraCalibration.h"
+#include "RobotMetrics.h"
+
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
+#include <cmath>
+#include <string>
+
 ColorTracker::ColorTracker(const CameraCalibration * cam_calib,
                            const RobotMetrics * metrics,
                            const ColorCalibration * col_calib,
@@ -10,7 +21,11 @@ ColorTracker::ColorTracker(const CameraCalibration * cam_calib,
     m_cal      ( cam_calib ),
     m_metrics  ( metrics ),
     m_colorCal ( col_calib ),
-    m_currImg  ( currentImage )
+    m_currImg  ( cv::Mat(currentImage) )
+{
+}
+
+ColorTracker::~ColorTracker()
 {
 }
 
@@ -20,7 +35,7 @@ ColorTracker::ColorTracker(const CameraCalibration * cam_calib,
  **/
 CvPoint2D32f ColorTracker::GetBrushBarLeft( CvPoint2D32f position, float heading ) const
 {
-    heading += MathsConstants::F_PI / 2.f;
+    heading += M_PI / 2.f;
 
     float w = GetMetrics()->GetBrushBarWidthPx(); // brush bar width (pixels)
 
@@ -42,7 +57,7 @@ CvPoint2D32f ColorTracker::GetBrushBarLeft( CvPoint2D32f position, float heading
  **/
 CvPoint2D32f ColorTracker::GetBrushBarRight( CvPoint2D32f position, float heading ) const
 {
-    heading += 3.14159265359f / 2.f;
+    heading += M_PI / 2.f;
 
     float w = GetMetrics()->GetBrushBarWidthPx(); // brush bar width (pixels)
 
@@ -56,6 +71,33 @@ CvPoint2D32f ColorTracker::GetBrushBarRight( CvPoint2D32f position, float headin
     float y = px * sina + py * cosa;
 
     return cvPoint2D32f( position.x + x, position.y + y );
+}
+
+void ColorTracker::Activate()
+{
+    /* Placeholder function */
+    m_status = TRACKER_ACTIVE;
+}
+
+bool ColorTracker::Track(double timeStamp)
+{
+    /* Placeholder function */
+    return false;
+}
+
+void ColorTracker::DoInactiveProcessing(double timeStamp)
+{
+    /* Placeholder function */
+}
+
+void ColorTracker::Rewind(double timeStamp)
+{
+    /* Placeholder function */
+}
+
+void ColorTracker::SetParam(paramType param, float value)
+{
+    /* Placeholder function */
 }
 
 int ColorTracker::largest_polygon(std::vector<std::vector<cv::Point2i> > & polygons)
@@ -77,7 +119,7 @@ int ColorTracker::largest_polygon(std::vector<std::vector<cv::Point2i> > & polyg
   return best_index;
 }
 
-void segment_blobs(const cv::Mat & input_image,
+void ColorTracker::segment_blobs(const cv::Mat & input_image,
     std::vector<std::vector<cv::Point2i> > * contours, double hue_ref,
     double hue_thr, double sat_thr)
 {
@@ -119,18 +161,19 @@ void segment_blobs(const cv::Mat & input_image,
       CV_CHAIN_APPROX_SIMPLE);
 }
 
-cv::Point2f find_blob(const cv::Mat & input_image, double hue_ref,
+cv::Point2f ColorTracker::find_blob(const cv::Mat & input_image, double hue_ref,
     double hue_thr, double sat_thr)
 {
   std::vector<std::vector<cv::Point2i> > contours;
   segment_blobs(input_image, &contours, hue_ref, hue_thr, sat_thr);
   int best_index = largest_polygon(contours);
   cv::Point2f centroid;
+  double area;
   if (!contours.empty())
   {
     std::vector<cv::Point2i> best_polygon = contours[best_index];
     std::vector<cv::Point2i>::iterator it;
-    double area;
+    area = 0;
     cv::Point2i p0, p1;
     for (it = best_polygon.begin(); it != best_polygon.end(); ++it)
     {
