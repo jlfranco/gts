@@ -47,7 +47,6 @@
            <verstretch>100</verstretch>
           </sizepolicy>
          </property>
-         <zorder></zorder>
         </widget>
         <widget class="QFrame" name="m_calibrationFrame">
          <property name="sizePolicy">
@@ -627,7 +626,7 @@ p, li { white-space: pre-wrap; }
              <attribute name="title">
               <string>Color Calibration</string>
              </attribute>
-             <widget class="QWidget" name="">
+             <widget class="QWidget" name="layoutWidget">
               <property name="geometry">
                <rect>
                 <x>0</x>
@@ -641,7 +640,7 @@ p, li { white-space: pre-wrap; }
                 <number>1</number>
                </property>
                <item>
-                <widget class="QGroupBox" name="groupBox">
+                <widget class="QGroupBox" name="colorGroupBox">
                  <property name="title">
                   <string>Type of calibration</string>
                  </property>
@@ -663,19 +662,19 @@ p, li { white-space: pre-wrap; }
                     <item>
                      <layout class="QHBoxLayout" name="horizontalLayout_9">
                       <item>
-                       <widget class="QPushButton" name="m_hueLeft">
+                       <widget class="QPushButton" name="m_hueLeftLabel">
                         <property name="text">
                          <string>Hue Left</string>
                         </property>
                        </widget>
                       </item>
                       <item>
-                       <widget class="QFrame" name="frame">
-                        <property name="frameShape">
-                         <enum>QFrame::StyledPanel</enum>
+                       <widget class="QLineEdit" name="m_hueLeft">
+                        <property name="alignment">
+                         <set>Qt::AlignCenter</set>
                         </property>
-                        <property name="frameShadow">
-                         <enum>QFrame::Raised</enum>
+                        <property name="readOnly">
+                         <bool>true</bool>
                         </property>
                        </widget>
                       </item>
@@ -684,19 +683,19 @@ p, li { white-space: pre-wrap; }
                     <item>
                      <layout class="QHBoxLayout" name="horizontalLayout_18">
                       <item>
-                       <widget class="QPushButton" name="pushButton">
+                       <widget class="QPushButton" name="m_hueRightLabel">
                         <property name="text">
                          <string>Hue RIght</string>
                         </property>
                        </widget>
                       </item>
                       <item>
-                       <widget class="QFrame" name="frame_2">
-                        <property name="frameShape">
-                         <enum>QFrame::StyledPanel</enum>
+                       <widget class="QLineEdit" name="m_hueRight">
+                        <property name="alignment">
+                         <set>Qt::AlignCenter</set>
                         </property>
-                        <property name="frameShadow">
-                         <enum>QFrame::Raised</enum>
+                        <property name="readOnly">
+                         <bool>true</bool>
                         </property>
                        </widget>
                       </item>
@@ -705,14 +704,14 @@ p, li { white-space: pre-wrap; }
                     <item>
                      <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="2,1">
                       <item>
-                       <widget class="QLabel" name="label_2">
+                       <widget class="QLabel" name="labelx">
                         <property name="text">
                          <string>Luminance Max</string>
                         </property>
                        </widget>
                       </item>
                       <item>
-                       <widget class="QLineEdit" name="lineEdit"/>
+                       <widget class="QLineEdit" name="m_luminanceMax"/>
                       </item>
                      </layout>
                     </item>
@@ -726,7 +725,7 @@ p, li { white-space: pre-wrap; }
                        </widget>
                       </item>
                       <item>
-                       <widget class="QLineEdit" name="lineEdit_3"/>
+                       <widget class="QLineEdit" name="m_luminanceMin"/>
                       </item>
                      </layout>
                     </item>
@@ -740,7 +739,7 @@ p, li { white-space: pre-wrap; }
                        </widget>
                       </item>
                       <item>
-                       <widget class="QLineEdit" name="lineEdit_2"/>
+                       <widget class="QLineEdit" name="m_saturationMin"/>
                       </item>
                      </layout>
                     </item>
@@ -754,7 +753,7 @@ p, li { white-space: pre-wrap; }
                        </widget>
                       </item>
                       <item>
-                       <widget class="QLineEdit" name="lineEdit_5"/>
+                       <widget class="QLineEdit" name="m_grayRed"/>
                       </item>
                      </layout>
                     </item>
@@ -768,7 +767,7 @@ p, li { white-space: pre-wrap; }
                        </widget>
                       </item>
                       <item>
-                       <widget class="QLineEdit" name="lineEdit_6"/>
+                       <widget class="QLineEdit" name="m_grayGreen"/>
                       </item>
                      </layout>
                     </item>
@@ -782,7 +781,7 @@ p, li { white-space: pre-wrap; }
                        </widget>
                       </item>
                       <item>
-                       <widget class="QLineEdit" name="lineEdit_7"/>
+                       <widget class="QLineEdit" name="m_grayBlue"/>
                       </item>
                      </layout>
                     </item>
@@ -796,7 +795,7 @@ p, li { white-space: pre-wrap; }
                        </widget>
                       </item>
                       <item>
-                       <widget class="QLineEdit" name="lineEdit_4"/>
+                       <widget class="QLineEdit" name="m_grayPercentage"/>
                       </item>
                      </layout>
                     </item>
@@ -810,7 +809,7 @@ p, li { white-space: pre-wrap; }
                        </widget>
                       </item>
                       <item>
-                       <widget class="QComboBox" name="comboBox"/>
+                       <widget class="QComboBox" name="m_method"/>
                       </item>
                      </layout>
                     </item>
@@ -820,7 +819,7 @@ p, li { white-space: pre-wrap; }
                 </widget>
                </item>
                <item>
-                <widget class="QGroupBox" name="m_addImageGroupBox">
+                <widget class="QGroupBox" name="m_colorAddImageGroupBox">
                  <property name="enabled">
                   <bool>true</bool>
                  </property>
@@ -838,12 +837,12 @@ p, li { white-space: pre-wrap; }
                    <number>6</number>
                   </property>
                   <item>
-                   <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="1,1,1">
+                   <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="1,1">
                     <property name="spacing">
                      <number>6</number>
                     </property>
                     <item>
-                     <widget class="QPushButton" name="m_getImageFromFileBtn">
+                     <widget class="QPushButton" name="m_colorGetImageFromFileBtn">
                       <property name="enabled">
                        <bool>true</bool>
                       </property>
@@ -853,14 +852,7 @@ p, li { white-space: pre-wrap; }
                      </widget>
                     </item>
                     <item>
-                     <widget class="QPushButton" name="m_captureLiveBtn">
-                      <property name="text">
-                       <string>Li&amp;ve</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QPushButton" name="m_captureCancelBtn">
+                     <widget class="QPushButton" name="m_colorCaptureCancelBtn">
                       <property name="text">
                        <string>Cancel</string>
                       </property>
@@ -887,7 +879,7 @@ p, li { white-space: pre-wrap; }
                   </spacer>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="m_calibrateBtn">
+                  <widget class="QPushButton" name="m_colorCalibrateBtn">
                    <property name="text">
                     <string>&amp;Calibrate</string>
                    </property>
@@ -909,7 +901,7 @@ p, li { white-space: pre-wrap; }
                 </layout>
                </item>
                <item>
-                <spacer name="verticalSpacer">
+                <spacer name="colorVerticalSpacer">
                  <property name="orientation">
                   <enum>Qt::Vertical</enum>
                  </property>
