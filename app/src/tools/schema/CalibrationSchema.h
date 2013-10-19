@@ -54,6 +54,18 @@ namespace CalibrationSchema
     extern const KeyName distortionCoefficientsKey;
     extern const KeyName invDistortionCoefficientsKey;
     extern const KeyName avgReprojectionErrorKey;
+
+    extern const KeyName colorCalibrationGroup;
+    extern const KeyName hueLeftKey;
+    extern const KeyName hueRightKey;
+    extern const KeyName luminanceMaxKey;
+    extern const KeyName luminanceMinKey;
+    extern const KeyName saturationMinKey;
+    extern const KeyName grayRedKey;
+    extern const KeyName grayGreenKey;
+    extern const KeyName grayBlueKey;
+    extern const KeyName grayPercentageKey;
+    extern const KeyName methodKey;
 }
 
 #endif // SCHEMAKEYS_CALIBRATION_H_

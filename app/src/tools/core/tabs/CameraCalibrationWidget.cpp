@@ -88,6 +88,17 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
                                       CalibrationSchema::gridRowsKey,
                                       CalibrationSchema::gridColumnsKey ) );
 
+    AddMapper( CalibrationSchema::hueLeftKey, m_ui->m_hueLeft );
+    AddMapper( CalibrationSchema::hueRightKey, m_ui->m_hueRight );
+    AddMapper( CalibrationSchema::luminanceMaxKey, m_ui->m_luminanceMax );
+    AddMapper( CalibrationSchema::luminanceMinKey, m_ui->m_luminanceMin );
+    AddMapper( CalibrationSchema::saturationMinKey, m_ui->m_saturationMin );
+    AddMapper( CalibrationSchema::grayRedKey, m_ui->m_grayRed );
+    AddMapper( CalibrationSchema::grayGreenKey, m_ui->m_grayGreen );
+    AddMapper( CalibrationSchema::grayBlueKey, m_ui->m_grayBlue );
+    AddMapper( CalibrationSchema::grayPercentageKey, m_ui->m_grayPercentage );
+    AddMapper( CalibrationSchema::methodKey, m_ui->m_method );
+
     m_imageTableMapper = new CalibrationImageTableMapper( *m_ui->m_imagesTableWidget );
     AddMapper( m_imageTableMapper );
 
@@ -409,6 +420,39 @@ const WbSchema CameraCalibrationWidget::CreateSchema()
                                       << distortionCoefficientsKey
                                       << invDistortionCoefficientsKey
                                       << avgReprojectionErrorKey );
+
+    schema.AddKeyGroup( colorCalibrationGroup,
+                        WbSchemaElement::Multiplicity::One,
+                        KeyNameList() << hueLeftKey
+                                      << hueRightKey
+                                      << luminanceMaxKey
+                                      << luminanceMinKey
+                                      << saturationMinKey
+                                      << grayRedKey
+                                      << grayGreenKey
+                                      << grayBlueKey
+                                      << grayPercentageKey
+                                      << methodKey,
+                        DefaultValueMap().WithDefault( hueLeftKey,
+                                                       KeyValue::from( "1,1,1" ) )
+                                         .WithDefault( hueRightKey,
+                                                       KeyValue::from( "1,1,1" ) )
+                                         .WithDefault( luminanceMaxKey,
+                                                       KeyValue::from( 1 ) )
+                                         .WithDefault( luminanceMinKey,
+                                                       KeyValue::from( 0 ) )
+                                         .WithDefault( saturationMinKey,
+                                                       KeyValue::from( 0.5 ) ) /*TODO define default*/
+                                         .WithDefault( grayRedKey,
+                                                       KeyValue::from( 0.5 ) )
+                                         .WithDefault( grayGreenKey,
+                                                       KeyValue::from( 0.5 ) )
+                                         .WithDefault( grayBlueKey,
+                                                       KeyValue::from( 0.5 ) )
+                                         .WithDefault( grayPercentageKey,
+                                                       KeyValue::from( 0.5 ) )
+                                         .WithDefault( methodKey,
+                                                       KeyValue::from( 0 ) ));
 
     return schema;
 }
