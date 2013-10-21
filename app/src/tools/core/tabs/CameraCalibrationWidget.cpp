@@ -138,6 +138,17 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
                       this,
                       SLOT( ImageTableItemChanged( QTableWidgetItem*,
                                                    QTableWidgetItem* ) ) );
+
+
+    QObject::connect( m_ui->m_colorGetImageFromFileBtn,
+                      SIGNAL( clicked() ),
+                      this,
+                      SLOT( ColorFromFileClicked() ) );
+    QObject::connect( m_ui->m_colorCalibrateBtn,
+                      SIGNAL( clicked() ),
+                      this,
+                      SLOT( ColorCalibrateBtnClicked() ) );
+
 }
 
 CameraCalibrationWidget::~CameraCalibrationWidget()
@@ -168,10 +179,10 @@ void CameraCalibrationWidget::ImageTableItemChanged(QTableWidgetItem* current,
     }
 }
 
-void CameraCalibrationWidget::FromFileClicked()
+void CameraCalibrationWidget::FromFile(const QString relativePath)
 {
     // Make sure folder is there before adding file
-    const QString fileDirPath( GetCurrentConfig().GetAbsoluteFileNameFor( "calibrationImages/" ) );
+    const QString fileDirPath( GetCurrentConfig().GetAbsoluteFileNameFor( relativePath ) );
     const bool mkPathSuccessful = QDir().mkpath( fileDirPath );
 
     if (!mkPathSuccessful)
@@ -205,7 +216,7 @@ void CameraCalibrationWidget::FromFileClicked()
                     const QString dstFile = QFileInfo( imageName ).fileName();
 
                     const QString newImageName(
-                        GetCurrentConfig().GetAbsoluteFileNameFor( "calibrationImages/" + dstFile ) );
+                        GetCurrentConfig().GetAbsoluteFileNameFor( relativePath + dstFile ) );
 
                     QFile::copy( imageName, newImageName );
 
@@ -227,6 +238,16 @@ void CameraCalibrationWidget::FromFileClicked()
             AddImageIfValid( imageName, mode );
         }
     }
+}
+
+void CameraCalibrationWidget::FromFileClicked()
+{
+    FromFile("calibrationImages/");
+}
+
+void CameraCalibrationWidget::ColorFromFileClicked()
+{
+    FromFile("colorCalibrationImages/");
 }
 
 void CameraCalibrationWidget::CalibrateBtnClicked()
@@ -319,6 +340,37 @@ void CameraCalibrationWidget::CaptureCancelBtnClicked()
     m_ui->m_captureCancelBtn->setEnabled(false);
     m_ui->m_captureLiveBtn->setEnabled(true);
     m_captureLiveBtnController->CaptureCancelBtnClicked();
+}
+
+void CameraCalibrationWidget::ColorCalibrateBtnClicked()
+{
+    /*TODO implement me! */
+    CalibrationAlgorithm alg;
+    UnknownLengthProgressDlg* const progressDialog = new UnknownLengthProgressDlg( this );
+    progressDialog->Start( tr( "Performing color calibration" ), tr( "" ) );
+
+    //    const bool calibrationSuccessful = alg.Run( GetCurrentConfig() );
+    //    ReloadCurrentConfig();
+    const bool calibrationSuccessful = false;
+
+    if ( calibrationSuccessful )
+    {
+        progressDialog->Complete( tr( "Camera Color Calibration Successful" ),
+                                  tr( "The camera has been color calibrated.\n"
+                                      "Average reprojection error is: %1." )
+                                      .arg( GetCurrentConfig()
+                                            .GetKeyValue( CalibrationSchema::avgReprojectionErrorKey )
+                                            .ToDouble() ) );
+    }
+    else
+    {
+        progressDialog->ForceClose();
+
+        Message::Show( 0,
+                       tr( "Camera Color Calibration Tool" ),
+                       tr( "NOT IMPLEMENTED!" ),
+                       Message::Severity_Critical );
+    }
 }
 
 bool CameraCalibrationWidget::IsDataValid() const

@@ -60,6 +60,12 @@ private slots:
     void PrintGridBtnClicked();
     void ImageTableItemChanged(QTableWidgetItem* current, QTableWidgetItem* previous);
 
+    //TODO implement us!
+    void ColorFromFileClicked();
+    void ColorCalibrateBtnClicked();
+    //    void HueLeftBtnClicked();
+    //    void HueRightBtnClicked();
+
 private:
     const QString GetSubSchemaDefaultFileName() const;
 
@@ -71,6 +77,8 @@ private:
     virtual void ReloadCurrentConfigToolSpecific();
 
     static const WbSchema CreateSchema();
+
+    void FromFile(const QString relativePath);
 
     bool IsDataValid() const;
 
