@@ -57,6 +57,11 @@ public:
         return m_angle;
     }
 
+    double GetCurrentTime() const
+    {
+        return m_current_timestamp;
+    }
+
     CvPoint2D32f GetBrushBarLeft(CvPoint2D32f position, float heading) const;
     CvPoint2D32f GetBrushBarRight(CvPoint2D32f position, float heading) const;
 
@@ -135,6 +140,8 @@ private:
     float m_angle;
 
     float m_error; // Keep this?
+
+    double m_current_timestamp;
 
     SVec m_current_state;
     SCov m_current_cov;
