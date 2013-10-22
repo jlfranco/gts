@@ -225,8 +225,10 @@ cv::Point2f ColorTracker::find_blob(const cv::Mat & input_image, double hue_ref,
         p1 = *(it + 1);
       }
       area += 0.5 * double(p0.x * p1.y - p0.y * p1.x);
-      centroid.x = centroid.x + double((p0.x + p1.x) * (p0.x * p1.y - p0.y * p1.x));
-      centroid.y = centroid.y + double((p0.y + p1.y) * (p0.x * p1.y - p0.y * p1.x));
+      centroid.x = centroid.x +
+          double((p0.x + p1.x) * (p0.x * p1.y - p0.y * p1.x));
+      centroid.y = centroid.y +
+          double((p0.y + p1.y) * (p0.x * p1.y - p0.y * p1.x));
     }
     centroid.x = centroid.x / (6*area);
     centroid.y = centroid.y / (6*area);
@@ -236,4 +238,74 @@ cv::Point2f ColorTracker::find_blob(const cv::Mat & input_image, double hue_ref,
     centroid = cv::Point2f(-1., -1.);
   }
   return centroid;
+}
+
+void ColorTracker::predict(double delta_t)
+{
+    // First, construct the extended state vector and covariance matrix
+    // to extract the sigma-points for prediction
+    XVec10 extended_state;
+    for (int i = 0; i < 5; ++i)
+    {
+        extended_state(i) = m_current_state(i);
+        extended_state(i+5) = 0;
+    }
+    XCov10 extended_covariance = XCov10::zeros();
+    for (int i = 0; i < 5; ++i)
+    {
+        for (int j = 0; j < 5; ++j)
+        {
+            extended_covariance(i, j) = m_current_cov(i, j);
+            extended_covariance(i+5, j+5) = m_proc_noise_cov(i, j);
+        }
+    }
+    // Obtain vector of sigma points and corresponding weights
+    cv::Mat cov_as_mat = (10 + m_kappa) * cv::Mat(extended_covariance);
+    cv::Mat decomposed_cov;
+    cholesky(cov_as_mat, decomposed_cov);
+    std::vector<double> sigma_weights;
+    std::vector<XVec10> sigma_points;
+    sigma_points.push_back(extended_state);
+    sigma_weights.push_back(m_kappa/(m_kappa + 10));
+    XVec10 current_col;
+    for (int i = 0; i < 10; ++i)
+    {
+      decomposed_cov.col(i).copyTo(current_col);
+      sigma_points.push_back(
+        extended_state + current_col);
+      sigma_points.push_back(
+        extended_state - current_col);
+      sigma_weights.push_back(0.5/(m_kappa + 10));
+      sigma_weights.push_back(0.5/(m_kappa + 10));
+    }
+    // Transform sigma points according to the process model
+    std::vector<XVec10> transformed_points;
+    XVec10 new_point;
+    std::vector<XVec10>::iterator it;
+    for (it = sigma_points.begin(); it != sigma_points.end(); ++it)
+    {
+      new_point(0) = (*it)[0] + delta_t * (*it)[3] * cos((*it)[2]);
+      new_point(1) = (*it)[1] + delta_t * (*it)[3] * sin((*it)[2]);
+      new_point(2) = (*it)[2] + delta_t * (*it)[4];
+      new_point(3) = (*it)[3];
+      new_point(4) = (*it)[4];
+      transformed_points.push_back(new_point);
+    }
+    // Recover new mean and covariance;
+    XVec10 weighted_mean;
+    weighted_mean *= 0; // Make sure elements are initialized to 0
+    std::vector<double>::iterator wt;
+    for (it = transformed_points.begin(),wt = sigma_weights.begin();
+         it != transformed_points.end(); ++it, ++wt)
+    {
+      weighted_mean += (*wt) * (*it);
+    }
+    XCov10 weighted_cov = XCov10::zeros();
+    for (it = transformed_points.begin(), wt = sigma_weights.begin();
+         it != transformed_points.end(); ++it, ++wt)
+    {
+      weighted_cov += (*wt) *
+          (*it - weighted_mean) * (*it - weighted_mean).t();
+    }
+    // NEXT UP: Extract predicted state and covariance, write update fcns.
 }

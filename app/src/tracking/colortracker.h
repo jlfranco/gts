@@ -127,7 +127,7 @@ private:
     cv::Point2f find_blob(const cv::Mat & input_image, double hue_ref,
         double hue_thr, double sat_thr);
 
-    void predict(double timeStamp);
+    void predict(double delta_t);
     void update_left(MVec measurement);
     void update_right(MVec measurement);
 
@@ -138,8 +138,9 @@ private:
 
     SVec m_current_state;
     SCov m_current_cov;
-    std::vector<XVec10> SigmaPoints10(XVec10, XCov10);
-
+    SCov m_proc_noise_cov;
+    MCov m_meas_noise_cov;
+    double m_kappa; // Used in the unscented transform
 
     cv::Mat m_currImg;
     const IplImage * m_legacy_img;
