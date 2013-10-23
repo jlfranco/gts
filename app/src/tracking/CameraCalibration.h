@@ -20,6 +20,7 @@
 #define CAMERACALIBRATION_H
 
 #include "WbConfig.h"
+#include "ColorCalibration.h"
 
 #include <opencv/cv.h>
 
@@ -44,6 +45,8 @@ public:
 
     bool LoadCameraTransform( const KeyId camPosId, const WbConfig& floorPlanCfg );
 
+    bool LoadColorCalibration( const WbConfig& cameraCalColor );
+
     bool PerformExtrinsicCalibration(CvSize        boardSize,
                                       RobotMetrics& metrics,
                                       IplImage**    viewWarp,
@@ -63,6 +66,8 @@ public:
     CvPoint2D32f ImageToPlane(CvPoint2D32f p) const;
     CvPoint2D32f PlaneToImage(CvPoint2D32f p) const;
 
+    void ComputeColorCalibration ( const CvMat* imagePoints );
+
     // get calibration info
     const CvMat* GetIntrinsicParams()       const { return &m_intrinsic; };
     const CvMat* GetDistortionParams()      const { return &m_distortion; };
@@ -70,6 +75,7 @@ public:
     const CvMat* GetRotationParams()        const { return &m_rot; };
     const CvMat* GetTranslationParams()     const { return &m_trans; };
     const CvMat* GetCameraCentrePx()        const { return &m_cameraCentre; };
+    const ColorCalibration* GetColorCalibration()      const { return &m_color; };
 
     const CvMat* GetCameraTransform()       const { return &m_transform; };
 
@@ -133,6 +139,10 @@ private:
 
     const char* m_calImageName;
     IplImage*   m_calWarpImg;
+
+    /*TODO make this make sense */
+    const char* m_colorCalImageName;
+    ColorCalibration m_color;
 };
 
 #endif // CAMERACALIBRATION_H

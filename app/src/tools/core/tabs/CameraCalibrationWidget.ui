@@ -69,38 +69,45 @@
            <number>0</number>
           </property>
           <item>
-           <widget class="QTabWidget" name="m_optionsTabs">
-            <property name="minimumSize">
-             <size>
-              <width>220</width>
-              <height>0</height>
-             </size>
-            </property>
+           <widget class="QTabWidget" name="m_calibrationType">
             <property name="currentIndex">
-             <number>0</number>
+             <number>1</number>
             </property>
-            <widget class="QWidget" name="m_standardOptionsPage">
+            <widget class="QWidget" name="m_metricCalibration">
              <attribute name="title">
-              <string>&amp;Settings</string>
+              <string>Calibration</string>
              </attribute>
-             <layout class="QVBoxLayout" name="verticalLayout">
-              <property name="spacing">
-               <number>6</number>
+             <widget class="QTabWidget" name="m_optionsTabs">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>278</width>
+                <height>486</height>
+               </rect>
               </property>
-              <property name="leftMargin">
-               <number>0</number>
+              <property name="minimumSize">
+               <size>
+                <width>220</width>
+                <height>0</height>
+               </size>
               </property>
-              <property name="topMargin">
-               <number>3</number>
+              <property name="currentIndex">
+               <number>2</number>
               </property>
-              <property name="rightMargin">
-               <number>0</number>
-              </property>
-              <property name="bottomMargin">
-               <number>3</number>
-              </property>
-              <item>
+              <widget class="QWidget" name="m_standardOptionsPage">
+               <attribute name="title">
+                <string>&amp;Settings</string>
+               </attribute>
                <widget class="QGroupBox" name="groupBox">
+                <property name="geometry">
+                 <rect>
+                  <x>0</x>
+                  <y>3</y>
+                  <width>196</width>
+                  <height>162</height>
+                 </rect>
+                </property>
                 <property name="title">
                  <string>Calibration Grid</string>
                 </property>
@@ -127,13 +134,35 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="1" column="0">
-                  <widget class="QLabel" name="m_gridRowsLabel">
-                   <property name="text">
-                    <string>&amp;Rows</string>
+                 <item row="2" column="1">
+                  <widget class="QSpinBox" name="m_gridColumnsSpinBox">
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                    </property>
-                   <property name="buddy">
-                    <cstring>m_gridRowsSpinBox</cstring>
+                   <property name="minimum">
+                    <number>0</number>
+                   </property>
+                   <property name="maximum">
+                    <number>99</number>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QDoubleSpinBox" name="m_gridSquareSizeSpinBox">
+                   <property name="alignment">
+                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                   </property>
+                   <property name="suffix">
+                    <string>cm</string>
+                   </property>
+                   <property name="decimals">
+                    <number>1</number>
+                   </property>
+                   <property name="minimum">
+                    <double>0.000000000000000</double>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.100000000000000</double>
                    </property>
                   </widget>
                  </item>
@@ -160,16 +189,13 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="2" column="1">
-                  <widget class="QSpinBox" name="m_gridColumnsSpinBox">
-                   <property name="alignment">
-                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="m_gridRowsLabel">
+                   <property name="text">
+                    <string>&amp;Rows</string>
                    </property>
-                   <property name="minimum">
-                    <number>0</number>
-                   </property>
-                   <property name="maximum">
-                    <number>99</number>
+                   <property name="buddy">
+                    <cstring>m_gridRowsSpinBox</cstring>
                    </property>
                   </widget>
                  </item>
@@ -183,30 +209,17 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="0" column="1">
-                  <widget class="QDoubleSpinBox" name="m_gridSquareSizeSpinBox">
-                   <property name="alignment">
-                    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                   </property>
-                   <property name="suffix">
-                    <string>cm</string>
-                   </property>
-                   <property name="decimals">
-                    <number>1</number>
-                   </property>
-                   <property name="minimum">
-                    <double>0.000000000000000</double>
-                   </property>
-                   <property name="singleStep">
-                    <double>0.100000000000000</double>
-                   </property>
-                  </widget>
-                 </item>
                 </layout>
                </widget>
-              </item>
-              <item>
                <widget class="QTableWidget" name="m_imagesTableWidget">
+                <property name="geometry">
+                 <rect>
+                  <x>0</x>
+                  <y>171</y>
+                  <width>216</width>
+                  <height>171</height>
+                 </rect>
+                </property>
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                   <horstretch>0</horstretch>
@@ -244,7 +257,7 @@
                  <bool>true</bool>
                 </property>
                 <attribute name="horizontalHeaderVisible">
-                 <bool>true</bool>
+                 <bool>false</bool>
                 </attribute>
                 <attribute name="horizontalHeaderCascadingSectionResizes">
                  <bool>false</bool>
@@ -371,9 +384,15 @@
                  </property>
                 </item>
                </widget>
-              </item>
-              <item>
                <widget class="QGroupBox" name="m_addImageGroupBox">
+                <property name="geometry">
+                 <rect>
+                  <x>0</x>
+                  <y>348</y>
+                  <width>216</width>
+                  <height>45</height>
+                 </rect>
+                </property>
                 <property name="title">
                  <string>Add Image:</string>
                 </property>
@@ -445,155 +464,453 @@
                  </item>
                 </layout>
                </widget>
-              </item>
-              <item>
                <widget class="QPushButton" name="m_calibrateBtn">
+                <property name="geometry">
+                 <rect>
+                  <x>0</x>
+                  <y>399</y>
+                  <width>85</width>
+                  <height>27</height>
+                 </rect>
+                </property>
                 <property name="text">
                  <string>&amp;Calibrate</string>
                 </property>
                </widget>
-              </item>
-             </layout>
+              </widget>
+              <widget class="QWidget" name="m_advancedOptionsPage">
+               <attribute name="title">
+                <string>&amp;Advanced</string>
+               </attribute>
+               <layout class="QVBoxLayout" name="verticalLayout_3">
+                <property name="margin">
+                 <number>6</number>
+                </property>
+                <item>
+                 <widget class="QCheckBox" name="m_zeroTangentialCheckBox">
+                  <property name="toolTip">
+                   <string>&lt;p&gt;Assume zero tangential distortion.  This is usually best set on unless very many images are used.&lt;/p&gt;</string>
+                  </property>
+                  <property name="text">
+                   <string>No &amp;Tangential Distortion</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="m_fixPrincipalPtCheckBox">
+                  <property name="toolTip">
+                   <string>&lt;p&gt;Fix the principal point at the centre of the image&lt;/p&gt;</string>
+                  </property>
+                  <property name="text">
+                   <string>Fix &amp;Principal Point</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="m_flipCheckBox">
+                  <property name="toolTip">
+                   <string>&lt;p&gt;Flip the captured images around the horizontal axis before calibration&lt;/p&gt;</string>
+                  </property>
+                  <property name="text">
+                   <string>&amp;Flip Images</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QGroupBox" name="m_fixAspectRatioGroup">
+                  <property name="title">
+                   <string>Fix Aspect &amp;Ratio</string>
+                  </property>
+                  <property name="checkable">
+                   <bool>true</bool>
+                  </property>
+                  <layout class="QHBoxLayout" name="horizontalLayout_3">
+                   <item>
+                    <widget class="QLabel" name="m_aspectRatioLabel">
+                     <property name="text">
+                      <string>&amp;Value</string>
+                     </property>
+                     <property name="buddy">
+                      <cstring>m_aspectRatioLineEdit</cstring>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLineEdit" name="m_aspectRatioLineEdit">
+                     <property name="toolTip">
+                      <string>&lt;p&gt;Fix the aspect ratio (fx/fy)&lt;/p&gt;</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item>
+                 <spacer name="verticalSpacer">
+                  <property name="orientation">
+                   <enum>Qt::Vertical</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>20</width>
+                    <height>287</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+               </layout>
+              </widget>
+              <widget class="QWidget" name="tab">
+               <attribute name="title">
+                <string>&amp;Results</string>
+               </attribute>
+               <layout class="QVBoxLayout" name="verticalLayout_5">
+                <item>
+                 <widget class="QTextBrowser" name="m_resultsTextBrowser">
+                  <property name="palette">
+                   <palette>
+                    <active>
+                     <colorrole role="Base">
+                      <brush brushstyle="SolidPattern">
+                       <color alpha="0">
+                        <red>255</red>
+                        <green>255</green>
+                        <blue>255</blue>
+                       </color>
+                      </brush>
+                     </colorrole>
+                    </active>
+                    <inactive>
+                     <colorrole role="Base">
+                      <brush brushstyle="SolidPattern">
+                       <color alpha="0">
+                        <red>255</red>
+                        <green>255</green>
+                        <blue>255</blue>
+                       </color>
+                      </brush>
+                     </colorrole>
+                    </inactive>
+                    <disabled>
+                     <colorrole role="Base">
+                      <brush brushstyle="SolidPattern">
+                       <color alpha="255">
+                        <red>236</red>
+                        <green>233</green>
+                        <blue>216</blue>
+                       </color>
+                      </brush>
+                     </colorrole>
+                    </disabled>
+                   </palette>
+                  </property>
+                  <property name="frameShape">
+                   <enum>QFrame::NoFrame</enum>
+                  </property>
+                  <property name="html">
+                   <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Ubuntu'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;                                      &lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;                                                                      &lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </widget>
             </widget>
-            <widget class="QWidget" name="m_advancedOptionsPage">
+            <widget class="QWidget" name="m_colorCalibration">
              <attribute name="title">
-              <string>&amp;Advanced</string>
+              <string>Color Calibration</string>
              </attribute>
-             <layout class="QVBoxLayout" name="verticalLayout_3">
-              <property name="margin">
-               <number>6</number>
+             <widget class="QWidget" name="layoutWidget">
+              <property name="geometry">
+               <rect>
+                <x>0</x>
+                <y>0</y>
+                <width>221</width>
+                <height>475</height>
+               </rect>
               </property>
-              <item>
-               <widget class="QCheckBox" name="m_zeroTangentialCheckBox">
-                <property name="toolTip">
-                 <string>&lt;p&gt;Assume zero tangential distortion.  This is usually best set on unless very many images are used.&lt;/p&gt;</string>
-                </property>
-                <property name="text">
-                 <string>No &amp;Tangential Distortion</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="m_fixPrincipalPtCheckBox">
-                <property name="toolTip">
-                 <string>&lt;p&gt;Fix the principal point at the centre of the image&lt;/p&gt;</string>
-                </property>
-                <property name="text">
-                 <string>Fix &amp;Principal Point</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="m_flipCheckBox">
-                <property name="toolTip">
-                 <string>&lt;p&gt;Flip the captured images around the horizontal axis before calibration&lt;/p&gt;</string>
-                </property>
-                <property name="text">
-                 <string>&amp;Flip Images</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QGroupBox" name="m_fixAspectRatioGroup">
-                <property name="title">
-                 <string>Fix Aspect &amp;Ratio</string>
-                </property>
-                <property name="checkable">
-                 <bool>true</bool>
-                </property>
-                <layout class="QHBoxLayout" name="horizontalLayout_3">
+              <layout class="QVBoxLayout" name="verticalLayout_4">
+               <property name="spacing">
+                <number>1</number>
+               </property>
+               <item>
+                <widget class="QGroupBox" name="colorGroupBox">
+                 <property name="title">
+                  <string>Type of calibration</string>
+                 </property>
+                 <layout class="QGridLayout" name="gridLayout_2">
+                  <property name="topMargin">
+                   <number>6</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>6</number>
+                  </property>
+                  <item row="0" column="0">
+                   <layout class="QVBoxLayout" name="verticalLayout">
+                    <property name="spacing">
+                     <number>3</number>
+                    </property>
+                    <property name="topMargin">
+                     <number>6</number>
+                    </property>
+                    <item>
+                     <layout class="QHBoxLayout" name="horizontalLayout_9">
+                      <item>
+                       <widget class="QPushButton" name="m_hueLeftLabel">
+                        <property name="text">
+                         <string>Hue Left</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QLineEdit" name="m_hueLeft">
+                        <property name="alignment">
+                         <set>Qt::AlignCenter</set>
+                        </property>
+                        <property name="readOnly">
+                         <bool>true</bool>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                    <item>
+                     <layout class="QHBoxLayout" name="horizontalLayout_18">
+                      <item>
+                       <widget class="QPushButton" name="m_hueRightLabel">
+                        <property name="text">
+                         <string>Hue RIght</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QLineEdit" name="m_hueRight">
+                        <property name="alignment">
+                         <set>Qt::AlignCenter</set>
+                        </property>
+                        <property name="readOnly">
+                         <bool>true</bool>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                    <item>
+                     <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="2,1">
+                      <item>
+                       <widget class="QLabel" name="labelx">
+                        <property name="text">
+                         <string>Luminance Max</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QLineEdit" name="m_luminanceMax"/>
+                      </item>
+                     </layout>
+                    </item>
+                    <item>
+                     <layout class="QHBoxLayout" name="horizontalLayout_13" stretch="2,1">
+                      <item>
+                       <widget class="QLabel" name="label_4">
+                        <property name="text">
+                         <string>Luminance Min</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QLineEdit" name="m_luminanceMin"/>
+                      </item>
+                     </layout>
+                    </item>
+                    <item>
+                     <layout class="QHBoxLayout" name="horizontalLayout_12" stretch="2,1">
+                      <item>
+                       <widget class="QLabel" name="label_3">
+                        <property name="text">
+                         <string>Saturation Min</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QLineEdit" name="m_saturationMin"/>
+                      </item>
+                     </layout>
+                    </item>
+                    <item>
+                     <layout class="QHBoxLayout" name="horizontalLayout_15" stretch="2,1">
+                      <item>
+                       <widget class="QLabel" name="label_6">
+                        <property name="text">
+                         <string>Gray Red</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QLineEdit" name="m_grayRed"/>
+                      </item>
+                     </layout>
+                    </item>
+                    <item>
+                     <layout class="QHBoxLayout" name="horizontalLayout_16" stretch="2,1">
+                      <item>
+                       <widget class="QLabel" name="label_7">
+                        <property name="text">
+                         <string>Gray Green</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QLineEdit" name="m_grayGreen"/>
+                      </item>
+                     </layout>
+                    </item>
+                    <item>
+                     <layout class="QHBoxLayout" name="horizontalLayout_17" stretch="2,1">
+                      <item>
+                       <widget class="QLabel" name="label_8">
+                        <property name="text">
+                         <string>Gray Blue</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QLineEdit" name="m_grayBlue"/>
+                      </item>
+                     </layout>
+                    </item>
+                    <item>
+                     <layout class="QHBoxLayout" name="horizontalLayout_14" stretch="2,1">
+                      <item>
+                       <widget class="QLabel" name="label_5">
+                        <property name="text">
+                         <string>Gray Percentage</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QLineEdit" name="m_grayPercentage"/>
+                      </item>
+                     </layout>
+                    </item>
+                    <item>
+                     <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="1,3">
+                      <item>
+                       <widget class="QLabel" name="label">
+                        <property name="text">
+                         <string>Method</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QComboBox" name="m_method">
+                        <property name="currentIndex">
+                         <number>0</number>
+                        </property>
+                        <item>
+                         <property name="text">
+                          <string>Automatic</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>Manual</string>
+                         </property>
+                        </item>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <widget class="QGroupBox" name="m_colorAddImageGroupBox">
+                 <property name="enabled">
+                  <bool>true</bool>
+                 </property>
+                 <property name="title">
+                  <string>Image Source:</string>
+                 </property>
+                 <property name="flat">
+                  <bool>false</bool>
+                 </property>
+                 <layout class="QVBoxLayout" name="verticalLayout_6">
+                  <property name="topMargin">
+                   <number>6</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>6</number>
+                  </property>
+                  <item>
+                   <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="0">
+                    <property name="spacing">
+                     <number>6</number>
+                    </property>
+                    <item>
+                     <widget class="QPushButton" name="m_colorGetImageFromFileBtn">
+                      <property name="enabled">
+                       <bool>true</bool>
+                      </property>
+                      <property name="autoFillBackground">
+                       <bool>false</bool>
+                      </property>
+                      <property name="text">
+                       <string>F&amp;ile</string>
+                      </property>
+                      <property name="flat">
+                       <bool>false</bool>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
+                <layout class="QVBoxLayout" name="verticalLayout_7" stretch="0">
+                 <property name="spacing">
+                  <number>6</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>18</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>10</number>
+                 </property>
                  <item>
-                  <widget class="QLabel" name="m_aspectRatioLabel">
+                  <widget class="QPushButton" name="m_colorCalibrateBtn">
                    <property name="text">
-                    <string>&amp;Value</string>
-                   </property>
-                   <property name="buddy">
-                    <cstring>m_aspectRatioLineEdit</cstring>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLineEdit" name="m_aspectRatioLineEdit">
-                   <property name="toolTip">
-                    <string>&lt;p&gt;Fix the aspect ratio (fx/fy)&lt;/p&gt;</string>
+                    <string>&amp;Color Calibrate</string>
                    </property>
                   </widget>
                  </item>
                 </layout>
-               </widget>
-              </item>
-              <item>
-               <spacer name="verticalSpacer">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>20</width>
-                  <height>287</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-             </layout>
-            </widget>
-            <widget class="QWidget" name="tab">
-             <attribute name="title">
-              <string>&amp;Results</string>
-             </attribute>
-             <layout class="QVBoxLayout" name="verticalLayout_5">
-              <item>
-               <widget class="QTextBrowser" name="m_resultsTextBrowser">
-                <property name="palette">
-                 <palette>
-                  <active>
-                   <colorrole role="Base">
-                    <brush brushstyle="SolidPattern">
-                     <color alpha="0">
-                      <red>255</red>
-                      <green>255</green>
-                      <blue>255</blue>
-                     </color>
-                    </brush>
-                   </colorrole>
-                  </active>
-                  <inactive>
-                   <colorrole role="Base">
-                    <brush brushstyle="SolidPattern">
-                     <color alpha="0">
-                      <red>255</red>
-                      <green>255</green>
-                      <blue>255</blue>
-                     </color>
-                    </brush>
-                   </colorrole>
-                  </inactive>
-                  <disabled>
-                   <colorrole role="Base">
-                    <brush brushstyle="SolidPattern">
-                     <color alpha="255">
-                      <red>236</red>
-                      <green>233</green>
-                      <blue>216</blue>
-                     </color>
-                    </brush>
-                   </colorrole>
-                  </disabled>
-                 </palette>
-                </property>
-                <property name="frameShape">
-                 <enum>QFrame::NoFrame</enum>
-                </property>
-                <property name="html">
-                 <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
-&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
-p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Droid Sans'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
+               </item>
+               <item>
+                <spacer name="colorVerticalSpacer">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>17</width>
+                   <height>13</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
             </widget>
            </widget>
           </item>
@@ -621,8 +938,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>m_printGridBtn</tabstop>
   <tabstop>m_imagesTableWidget</tabstop>
   <tabstop>m_fromFileBtn</tabstop>
-  <tabstop>m_captureLiveBtn</tabstop>
-  <tabstop>m_calibrateBtn</tabstop>
  </tabstops>
  <resources/>
  <connections/>

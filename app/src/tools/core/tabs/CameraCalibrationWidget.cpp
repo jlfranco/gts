@@ -88,18 +88,37 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
                                       CalibrationSchema::gridRowsKey,
                                       CalibrationSchema::gridColumnsKey ) );
 
+    AddMapper( CalibrationSchema::hueLeftKey, m_ui->m_hueLeft );
+    AddMapper( CalibrationSchema::hueRightKey, m_ui->m_hueRight );
+    AddMapper( CalibrationSchema::luminanceMaxKey, m_ui->m_luminanceMax );
+    AddMapper( CalibrationSchema::luminanceMinKey, m_ui->m_luminanceMin );
+    AddMapper( CalibrationSchema::saturationMinKey, m_ui->m_saturationMin );
+    AddMapper( CalibrationSchema::grayRedKey, m_ui->m_grayRed );
+    AddMapper( CalibrationSchema::grayGreenKey, m_ui->m_grayGreen );
+    AddMapper( CalibrationSchema::grayBlueKey, m_ui->m_grayBlue );
+    AddMapper( CalibrationSchema::grayPercentageKey, m_ui->m_grayPercentage );
+    AddMapper( CalibrationSchema::methodKey, m_ui->m_method );
+
     m_imageTableMapper = new CalibrationImageTableMapper( *m_ui->m_imagesTableWidget );
     AddMapper( m_imageTableMapper );
 
     m_imageGridMapper = new CalibrationImageGridMapper( *m_ui->m_imageGrid );
     AddMapper( m_imageGridMapper );
 
+    imageGridReturnId.clear();
+
     AddMapper( new CalibrateCameraResultsMapper( *m_ui->m_resultsTextBrowser ) );
 
     QDoubleValidator* validator = new QDoubleValidator;
     m_ui->m_aspectRatioLineEdit->setValidator( validator );
 
+    m_ui->m_calibrationType->setCurrentIndex( 0 );
     m_ui->m_optionsTabs->setCurrentIndex( 0 );
+
+    QObject::connect( m_ui->m_calibrationType,
+                      SIGNAL ( currentChanged(int) ),
+                      this,
+                      SLOT ( CalibrationTypeChanged(int) ));
 
     QObject::connect( m_ui->m_fromFileBtn,
                       SIGNAL( clicked() ),
@@ -127,6 +146,25 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
                       this,
                       SLOT( ImageTableItemChanged( QTableWidgetItem*,
                                                    QTableWidgetItem* ) ) );
+
+
+    QObject::connect( m_ui->m_colorGetImageFromFileBtn,
+                      SIGNAL( clicked() ),
+                      this,
+                      SLOT( ColorFromFileClicked() ) );
+    QObject::connect( m_ui->m_hueLeftLabel,
+                      SIGNAL( clicked() ),
+                      this,
+                      SLOT( HueLeftBtnClicked() ) );
+    QObject::connect( m_ui->m_hueRightLabel,
+                      SIGNAL( clicked() ),
+                      this,
+                      SLOT( HueRightBtnClicked() ) );
+    QObject::connect( m_ui->m_colorCalibrateBtn,
+                      SIGNAL( clicked() ),
+                      this,
+                      SLOT( ColorCalibrateBtnClicked() ) );
+
 }
 
 CameraCalibrationWidget::~CameraCalibrationWidget()
@@ -137,6 +175,22 @@ CameraCalibrationWidget::~CameraCalibrationWidget()
 const QString CameraCalibrationWidget::GetSubSchemaDefaultFileName() const
 {
     return "calibration.xml";
+}
+
+void CameraCalibrationWidget::CalibrationTypeChanged(int index)
+{
+    if ( !index )
+    {
+        // this is the metric calibration tab
+        m_imageGridMapper->SetCurrentImage( imageGridReturnId.isNull()?"1":imageGridReturnId, false );
+    }
+    else
+    {
+        // this is the color calibration tab
+        imageGridReturnId = m_imageGridMapper->GetCurrentImageKey();
+        m_imageGridMapper->SetCurrentImage( "1", true );
+    }
+    ReloadCurrentConfig();
 }
 
 void CameraCalibrationWidget::ImageTableItemChanged(QTableWidgetItem* current,
@@ -152,15 +206,17 @@ void CameraCalibrationWidget::ImageTableItemChanged(QTableWidgetItem* current,
                                             CalibrationImageTableMapper::nameColumn );
         m_imageGridMapper->SetCurrentImage(
             currentRowNameItem->data(CalibrationImageTableMapper::idRoleOnName)
-                                     .toString());
+                                     .toString(),
+                                     false);
         ReloadCurrentConfig( m_imageTableMapper ); //must exclude table here to ensure it still has a "current row" for delete
     }
 }
 
-void CameraCalibrationWidget::FromFileClicked()
+void CameraCalibrationWidget::FromFile(const bool colorCalibFile)
 {
+    const QString relativePath = (colorCalibFile)?"colorCalibrationImages/":"calibrationImages/";
     // Make sure folder is there before adding file
-    const QString fileDirPath( GetCurrentConfig().GetAbsoluteFileNameFor( "calibrationImages/" ) );
+    const QString fileDirPath( GetCurrentConfig().GetAbsoluteFileNameFor( relativePath ) );
     const bool mkPathSuccessful = QDir().mkpath( fileDirPath );
 
     if (!mkPathSuccessful)
@@ -194,7 +250,7 @@ void CameraCalibrationWidget::FromFileClicked()
                     const QString dstFile = QFileInfo( imageName ).fileName();
 
                     const QString newImageName(
-                        GetCurrentConfig().GetAbsoluteFileNameFor( "calibrationImages/" + dstFile ) );
+                        GetCurrentConfig().GetAbsoluteFileNameFor( relativePath + dstFile ) );
 
                     QFile::copy( imageName, newImageName );
 
@@ -212,10 +268,20 @@ void CameraCalibrationWidget::FromFileClicked()
                     }
                 }
             }
+            AddImageIfValid( imageName, mode, colorCalibFile );
 
-            AddImageIfValid( imageName, mode );
         }
     }
+}
+
+void CameraCalibrationWidget::FromFileClicked()
+{
+    FromFile(false);
+}
+
+void CameraCalibrationWidget::ColorFromFileClicked()
+{
+    FromFile(true);
 }
 
 void CameraCalibrationWidget::CalibrateBtnClicked()
@@ -268,14 +334,25 @@ void CameraCalibrationWidget::ReloadCurrentConfigToolSpecific()
 }
 
 void CameraCalibrationWidget::AddImageIfValid( const QString& imageFileName,
-                                                 const WbConfigTools::FileNameMode& mode )
+                                               const WbConfigTools::FileNameMode& mode,
+                                               const bool colorCalibImage )
 {
     if ( !imageFileName.isEmpty() )
     {
-        WbConfigTools::AddFileName( GetCurrentConfig(),
-                                    imageFileName,
-                                    CalibrationSchema::imageFileKey,
-                                    mode );
+        if ( !colorCalibImage )
+        {
+            WbConfigTools::AddFileName( GetCurrentConfig(),
+                                        imageFileName,
+                                        CalibrationSchema::imageFileKey,
+                                        mode );
+        }
+        else
+        {
+            WbConfigTools::AddFileName( GetCurrentConfig(),
+                                        imageFileName,
+                                        CalibrationSchema::colorCalibImageFileKey,
+                                        mode );
+        }
         ReloadCurrentConfig();
     }
 }
@@ -300,7 +377,7 @@ void CameraCalibrationWidget::CaptureLiveBtnClicked()
                                                               } );
 #endif
 
-    AddImageIfValid( capturedImageFileName, WbConfigTools::FileNameMode_RelativeInsideWorkbench );
+    AddImageIfValid( capturedImageFileName, WbConfigTools::FileNameMode_RelativeInsideWorkbench, false );
 }
 
 void CameraCalibrationWidget::CaptureCancelBtnClicked()
@@ -308,6 +385,55 @@ void CameraCalibrationWidget::CaptureCancelBtnClicked()
     m_ui->m_captureCancelBtn->setEnabled(false);
     m_ui->m_captureLiveBtn->setEnabled(true);
     m_captureLiveBtnController->CaptureCancelBtnClicked();
+}
+
+void CameraCalibrationWidget::HueLeftBtnClicked()
+{
+    //TODO implement me
+    Message::Show( 0,
+                   tr( "Hue Left" ),
+                   tr( "NOT IMPLEMENTED!" ),
+                   Message::Severity_Critical );
+}
+
+void CameraCalibrationWidget::HueRightBtnClicked()
+{
+    //TODO implement me
+    Message::Show( 0,
+                   tr( "Hue Left" ),
+                   tr( "NOT IMPLEMENTED!" ),
+                   Message::Severity_Critical );
+}
+
+void CameraCalibrationWidget::ColorCalibrateBtnClicked()
+{
+    /*TODO implement me! */
+    CalibrationAlgorithm alg;
+    UnknownLengthProgressDlg* const progressDialog = new UnknownLengthProgressDlg( this );
+    progressDialog->Start( tr( "Performing color calibration" ), tr( "" ) );
+
+    //    const bool calibrationSuccessful = alg.Run( GetCurrentConfig() );
+    //    ReloadCurrentConfig();
+    const bool calibrationSuccessful = false;
+
+    if ( calibrationSuccessful )
+    {
+        progressDialog->Complete( tr( "Camera Color Calibration Successful" ),
+                                  tr( "The camera has been color calibrated.\n"
+                                      "Average reprojection error is: %1." )
+                                      .arg( GetCurrentConfig()
+                                            .GetKeyValue( CalibrationSchema::avgReprojectionErrorKey )
+                                            .ToDouble() ) );
+    }
+    else
+    {
+        progressDialog->ForceClose();
+
+        Message::Show( 0,
+                       tr( "Camera Color Calibration Tool" ),
+                       tr( "NOT IMPLEMENTED!" ),
+                       Message::Severity_Critical );
+    }
 }
 
 bool CameraCalibrationWidget::IsDataValid() const
@@ -409,6 +535,43 @@ const WbSchema CameraCalibrationWidget::CreateSchema()
                                       << distortionCoefficientsKey
                                       << invDistortionCoefficientsKey
                                       << avgReprojectionErrorKey );
+
+    schema.AddKeyGroup( colorCalibrationGroup,
+                        WbSchemaElement::Multiplicity::One,
+                        KeyNameList() << hueLeftKey
+                                      << hueRightKey
+                                      << luminanceMaxKey
+                                      << luminanceMinKey
+                                      << saturationMinKey
+                                      << grayRedKey
+                                      << grayGreenKey
+                                      << grayBlueKey
+                                      << grayPercentageKey
+                                      << methodKey,
+                        DefaultValueMap().WithDefault( hueLeftKey,
+                                                       KeyValue::from( "1,1,1" ) )
+                                         .WithDefault( hueRightKey,
+                                                       KeyValue::from( "1,1,1" ) )
+                                         .WithDefault( luminanceMaxKey,
+                                                       KeyValue::from( 1 ) )
+                                         .WithDefault( luminanceMinKey,
+                                                       KeyValue::from( 0 ) )
+                                         .WithDefault( saturationMinKey,
+                                                       KeyValue::from( 0.5 ) ) /*TODO define default*/
+                                         .WithDefault( grayRedKey,
+                                                       KeyValue::from( 0.5 ) )
+                                         .WithDefault( grayGreenKey,
+                                                       KeyValue::from( 0.5 ) )
+                                         .WithDefault( grayBlueKey,
+                                                       KeyValue::from( 0.5 ) )
+                                         .WithDefault( grayPercentageKey,
+                                                       KeyValue::from( 0.5 ) )
+                                         .WithDefault( methodKey,
+                                                       KeyValue::from( 0 ) ));
+
+    schema.AddKeyGroup( colorCalibImageGroup,
+                        WbSchemaElement::Multiplicity::One,
+                        KeyNameList() << colorCalibImageFileKey );
 
     return schema;
 }

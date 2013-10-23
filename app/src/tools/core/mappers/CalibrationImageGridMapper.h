@@ -38,7 +38,8 @@ public:
     virtual void CommitData( WbConfig& config );
     virtual void SetConfig( const WbConfig& config );
 
-    void SetCurrentImage(const KeyId& imageId);
+    void SetCurrentImage(const KeyId& imageId, const bool isColorCalib );
+    KeyId GetCurrentImageKey();
 
 private:
     void UpdateImage( const WbConfig& config );
@@ -50,6 +51,7 @@ private:
     ImageGrid& m_grid;
     QImage m_image;
     KeyId  m_currentImageId;
+    bool  colorCalib;
     const QImage m_notFoundImage;
 };
 
