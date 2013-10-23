@@ -247,8 +247,8 @@ void ColorTracker::predict(double delta_t)
   XVec10 extended_state;
   for (int i = 0; i < 5; ++i)
   {
-      extended_state(i) = m_current_state(i);
-      extended_state(i+5) = 0;
+      extended_state[i] = m_current_state(i);
+      extended_state[i+5] = 0;
   }
   XCov10 extended_covariance = XCov10::zeros();
   for (int i = 0; i < 5; ++i)
@@ -279,9 +279,10 @@ void ColorTracker::predict(double delta_t)
       sigma_weights.push_back(0.5/(m_kappa + 10));
   }
   // Transform sigma points according to the process model
-  std::vector<XVec10> transformed_points;
-  XVec10 new_point;
+  std::vector<SVec> transformed_points;
+  SVec new_point;
   std::vector<XVec10>::iterator it;
+  std::vector<SVec>::iterator jt;
   for (it = sigma_points.begin(); it != sigma_points.end(); ++it)
   {
       new_point[0] = (*it)[0] + delta_t * (*it)[3] * cos((*it)[2]);
@@ -292,32 +293,136 @@ void ColorTracker::predict(double delta_t)
       transformed_points.push_back(new_point);
   }
   // Recover new mean and covariance;
-  XVec10 weighted_mean;
+  SVec weighted_mean;
   weighted_mean *= 0; // Make sure elements are initialized to 0
   std::vector<double>::iterator wt;
-  for (it = transformed_points.begin(),wt = sigma_weights.begin();
-       it != transformed_points.end(); ++it, ++wt)
+  for (jt = transformed_points.begin(), wt = sigma_weights.begin();
+       jt != transformed_points.end(); ++jt, ++wt)
   {
-      weighted_mean += (*wt) * (*it);
+      weighted_mean += (*wt) * (*jt);
   }
-  XCov10 weighted_cov = XCov10::zeros();
-  for (it = transformed_points.begin(), wt = sigma_weights.begin();
-       it != transformed_points.end(); ++it, ++wt)
+  SCov weighted_cov = SCov::zeros();
+  for (jt = transformed_points.begin(), wt = sigma_weights.begin();
+       jt != transformed_points.end(); ++jt, ++wt)
   {
       weighted_cov += (*wt) *
-              (*it - weighted_mean) * (*it - weighted_mean).t();
+              (*jt - weighted_mean) * (*jt - weighted_mean).t();
   }
-  // NEXT UP: Extract predicted state and covariance, write update fcns.
+  m_current_state = weighted_mean;
+  m_current_cov = weighted_cov;
+  m_pos.x = m_current_state[0];
+  m_pos.y = m_current_state[1];
+  m_angle = m_current_state[2];
+}
+
+void ColorTracker::update(MVec measurement, int direction)
+{
+  assert(direction == 1 || direction == -1);
+  // First, construct the extended state vector and covariance matrix
+  // to extract the sigma-points for prediction
+  XVec7 extended_state;
   for (int i = 0; i < 5; ++i)
   {
-      m_current_state[i] = weighted_mean[i];
+      extended_state[i] = m_current_state(i);
   }
+  extended_state[5] = 0;
+  extended_state[6] = 0;
+  XCov7 extended_covariance = XCov7::zeros();
   for (int i = 0; i < 5; ++i)
   {
       for (int j = 0; j < 5; ++j)
       {
-          m_current_cov(i, j) = weighted_cov(i, j);
+          extended_covariance(i, j) = m_current_cov(i, j);
       }
+  }
+  for (int i = 5; i < 7; ++i)
+  {
+    for (int j = 5; j < 7; ++j)
+    {
+      extended_covariance(i, j) = m_meas_noise_cov(i, j);
+    }
+  }
+  // Obtain vector of sigma points and corresponding weights
+  cv::Mat cov_as_mat = (7 + m_kappa) * cv::Mat(extended_covariance);
+  cv::Mat decomposed_cov;
+  cholesky(cov_as_mat, decomposed_cov);
+  std::vector<double> sigma_weights;
+  std::vector<XVec7> sigma_points;
+  sigma_points.push_back(extended_state);
+  sigma_weights.push_back(m_kappa/(m_kappa + 7));
+  XVec7 current_col;
+  for (int i = 0; i < 7; ++i)
+  {
+      decomposed_cov.col(i).copyTo(current_col);
+      sigma_points.push_back(
+                  extended_state + current_col);
+      sigma_points.push_back(
+                  extended_state - current_col);
+      sigma_weights.push_back(0.5/(m_kappa + 7));
+      sigma_weights.push_back(0.5/(m_kappa + 7));
+  }
+  // Find weighted average of sigma points
+  XVec7 avg_sigma_points;
+  for (int i = 0; i < sigma_points.size(); ++i)
+  {
+    avg_sigma_points += sigma_weights[i] * sigma_points[i];
+  }
+  // Transform sigma points according to the process model
+  std::vector<MVec> transformed_points;
+  MVec new_point;
+  std::vector<XVec7>::iterator it;
+  std::vector<MVec>::iterator jt;
+  for (it = sigma_points.begin(); it != sigma_points.end(); ++it)
+  {
+    if (direction == -1)
+    {
+      new_point[0] = (*it)[0] - m_dist_left * sin((*it)[2]);
+      new_point[1] = (*it)[1] + m_dist_left * cos((*it)[2]);
+    }
+    else
+    {
+      new_point[0] = (*it)[0] + m_dist_right * sin((*it)[2]);
+      new_point[1] = (*it)[1] - m_dist_right * cos((*it)[2]);
+    }
+      transformed_points.push_back(new_point);
+  }
+  // Recover new mean and covariance;
+  MVec predicted_meas;
+  predicted_meas *= 0; // Make sure elements are initialized to 0
+  std::vector<double>::iterator wt;
+  for (jt = transformed_points.begin(), wt = sigma_weights.begin();
+       jt != transformed_points.end(); ++jt, ++wt)
+  {
+      predicted_meas += (*wt) * (*jt);
+  }
+  MCov weighted_cov = MCov::zeros();
+  for (jt = transformed_points.begin(), wt = sigma_weights.begin();
+       jt != transformed_points.end(); ++jt, ++wt)
+  {
+      weighted_cov += (*wt) *
+              (*jt - predicted_meas) * (*jt - predicted_meas).t();
+  }
+  CCov cross_cov = CCov::zeros();
+  // Construct cross covariance
+  // ...
+  for (int i = 0; i < sigma_points.size(); ++i)
+  {
+    cross_cov += sigma_weights[i] *
+        (sigma_points[i] - avg_sigma_points) *
+        (transformed_points[i] - predicted_meas).t();
+  }
+  CCov kalman_gain = cross_cov * weighted_cov.inv();
+  XVec7 corrected_state = extended_state +
+      kalman_gain * (measurement - predicted_meas);
+  XCov7 corrected_cov = extended_covariance -
+      kalman_gain * weighted_cov * kalman_gain.t();
+  for (int i = 0; i < 5; ++i)
+  {
+    m_current_state[i] = corrected_state[i];
+    for (int j = 0; j < 5; ++j)
+    {
+      m_current_cov(i, j) = corrected_cov(i, j);
+    }
   }
   m_pos.x = m_current_state[0];
   m_pos.y = m_current_state[1];

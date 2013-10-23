@@ -12,6 +12,7 @@ typedef cv::Vec<double, 10> XVec10;
 typedef cv::Vec<double, 7> XVec7;
 typedef cv::Matx<double, 5, 5> SCov;
 typedef cv::Matx<double, 2, 2> MCov;
+typedef cv::Matx<double, 7, 2> CCov;
 typedef cv::Matx<double, 10, 10> XCov10;
 typedef cv::Matx<double, 7, 7> XCov7;
 
@@ -132,9 +133,11 @@ private:
     cv::Point2f find_blob(const cv::Mat & input_image, double hue_ref,
         double hue_thr, double sat_thr);
 
+    // Uses process model to predict the robot's next position
     void predict(double delta_t);
-    void update_left(MVec measurement);
-    void update_right(MVec measurement);
+    // Uses one of two measurement models (one for left measurement,
+    // one for right measurement) to correct the predicted position.
+    void update(MVec measurement, int direction);
 
     cv::Point2f m_pos;
     float m_angle;
@@ -142,6 +145,9 @@ private:
     float m_error; // Keep this?
 
     double m_current_timestamp;
+
+    double m_dist_left;
+    double m_dist_right;
 
     SVec m_current_state;
     SCov m_current_cov;
