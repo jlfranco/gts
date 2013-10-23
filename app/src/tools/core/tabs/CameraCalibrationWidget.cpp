@@ -105,12 +105,20 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
     m_imageGridMapper = new CalibrationImageGridMapper( *m_ui->m_imageGrid );
     AddMapper( m_imageGridMapper );
 
+    imageGridReturnId.clear();
+
     AddMapper( new CalibrateCameraResultsMapper( *m_ui->m_resultsTextBrowser ) );
 
     QDoubleValidator* validator = new QDoubleValidator;
     m_ui->m_aspectRatioLineEdit->setValidator( validator );
 
+    m_ui->m_calibrationType->setCurrentIndex( 0 );
     m_ui->m_optionsTabs->setCurrentIndex( 0 );
+
+    QObject::connect( m_ui->m_calibrationType,
+                      SIGNAL ( currentChanged(int) ),
+                      this,
+                      SLOT ( CalibrationTypeChanged(int) ));
 
     QObject::connect( m_ui->m_fromFileBtn,
                       SIGNAL( clicked() ),
@@ -161,6 +169,22 @@ const QString CameraCalibrationWidget::GetSubSchemaDefaultFileName() const
     return "calibration.xml";
 }
 
+void CameraCalibrationWidget::CalibrationTypeChanged(int index)
+{
+    if ( !index )
+    {
+        // this is the metric calibration tab
+        m_imageGridMapper->SetCurrentImage( imageGridReturnId.isNull()?"1":imageGridReturnId, false );
+    }
+    else
+    {
+        // this is the color calibration tab
+        imageGridReturnId = m_imageGridMapper->GetCurrentImageKey();
+        m_imageGridMapper->SetCurrentImage( "1", true );
+    }
+    ReloadCurrentConfig();
+}
+
 void CameraCalibrationWidget::ImageTableItemChanged(QTableWidgetItem* current,
                                                       QTableWidgetItem* previous)
 {
@@ -174,13 +198,15 @@ void CameraCalibrationWidget::ImageTableItemChanged(QTableWidgetItem* current,
                                             CalibrationImageTableMapper::nameColumn );
         m_imageGridMapper->SetCurrentImage(
             currentRowNameItem->data(CalibrationImageTableMapper::idRoleOnName)
-                                     .toString());
+                                     .toString(),
+                                     false);
         ReloadCurrentConfig( m_imageTableMapper ); //must exclude table here to ensure it still has a "current row" for delete
     }
 }
 
-void CameraCalibrationWidget::FromFile(const QString relativePath)
+void CameraCalibrationWidget::FromFile(const bool colorCalibFile)
 {
+    const QString relativePath = (colorCalibFile)?"colorCalibrationImages/":"calibrationImages/";
     // Make sure folder is there before adding file
     const QString fileDirPath( GetCurrentConfig().GetAbsoluteFileNameFor( relativePath ) );
     const bool mkPathSuccessful = QDir().mkpath( fileDirPath );
@@ -234,20 +260,20 @@ void CameraCalibrationWidget::FromFile(const QString relativePath)
                     }
                 }
             }
+            AddImageIfValid( imageName, mode, colorCalibFile );
 
-            AddImageIfValid( imageName, mode );
         }
     }
 }
 
 void CameraCalibrationWidget::FromFileClicked()
 {
-    FromFile("calibrationImages/");
+    FromFile(false);
 }
 
 void CameraCalibrationWidget::ColorFromFileClicked()
 {
-    FromFile("colorCalibrationImages/");
+    FromFile(true);
 }
 
 void CameraCalibrationWidget::CalibrateBtnClicked()
@@ -300,14 +326,25 @@ void CameraCalibrationWidget::ReloadCurrentConfigToolSpecific()
 }
 
 void CameraCalibrationWidget::AddImageIfValid( const QString& imageFileName,
-                                                 const WbConfigTools::FileNameMode& mode )
+                                               const WbConfigTools::FileNameMode& mode,
+                                               const bool colorCalibImage )
 {
     if ( !imageFileName.isEmpty() )
     {
-        WbConfigTools::AddFileName( GetCurrentConfig(),
-                                    imageFileName,
-                                    CalibrationSchema::imageFileKey,
-                                    mode );
+        if ( !colorCalibImage )
+        {
+            WbConfigTools::AddFileName( GetCurrentConfig(),
+                                        imageFileName,
+                                        CalibrationSchema::imageFileKey,
+                                        mode );
+        }
+        else
+        {
+            WbConfigTools::AddFileName( GetCurrentConfig(),
+                                        imageFileName,
+                                        CalibrationSchema::colorCalibImageFileKey,
+                                        mode );
+        }
         ReloadCurrentConfig();
     }
 }
@@ -332,7 +369,7 @@ void CameraCalibrationWidget::CaptureLiveBtnClicked()
                                                               } );
 #endif
 
-    AddImageIfValid( capturedImageFileName, WbConfigTools::FileNameMode_RelativeInsideWorkbench );
+    AddImageIfValid( capturedImageFileName, WbConfigTools::FileNameMode_RelativeInsideWorkbench, false );
 }
 
 void CameraCalibrationWidget::CaptureCancelBtnClicked()
@@ -505,6 +542,10 @@ const WbSchema CameraCalibrationWidget::CreateSchema()
                                                        KeyValue::from( 0.5 ) )
                                          .WithDefault( methodKey,
                                                        KeyValue::from( 0 ) ));
+
+    schema.AddKeyGroup( colorCalibImageGroup,
+                        WbSchemaElement::Multiplicity::One,
+                        KeyNameList() << colorCalibImageFileKey );
 
     return schema;
 }

@@ -174,6 +174,55 @@ bool CameraCalibration::LoadCameraTransform( const KeyId camPosId, const WbConfi
 }
 
 /**
+    Load the camera transform parameters from config.
+**/
+bool CameraCalibration::LoadColorCalibration( const WbConfig& cameraCalColor )
+{
+    bool successful = false;
+
+    // const WbKeyValues::ValueIdPairList calColorIds =
+    //     cameraCalColor.GetKeyValues( CalibrationSchema::transformKey );
+    // for (WbKeyValues::ValueIdPairList::const_iterator itt = calColorIds.begin(); itt != calColorIds.end(); ++itt)
+    // {
+        // const KeyId cameraId( cameraCalColor.GetKeyValue( FloorPlanSchema::cameraIdKey, itt->id ).ToKeyId() );
+
+        // if (cameraId == camPosId)
+        // {
+        //     LOG_INFO(QObject::tr("Camera position id: %1").arg(camPosId));
+
+        //     float transf_f[9];
+        //     CvMat transf = cvMat( 3, 3, CV_32F, transf_f );
+
+        //     successful = cameraCalColor.GetKeyValue(
+        //                      FloorPlanSchema::transformKey, itt->id).ToCvMat(transf);
+
+        //     LOG_INFO("Camera transform:");
+        //     OpenCvUtility::LogCvMat32F(&transf);
+
+        //     double offsetX = cameraCalColor.GetKeyValue(
+        //                          FloorPlanSchema::offsetXKey, itt->id).ToDouble();
+        //     double offsetY = cameraCalColor.GetKeyValue(
+        //                          FloorPlanSchema::offsetYKey, itt->id).ToDouble();
+
+        //     float transl_f[9];
+        //     CvMat transl = cvMat( 3, 3, CV_32F, transl_f );
+        //     cvSetIdentity( &transl );
+        //     transl_f[2] = offsetX;
+        //     transl_f[5] = offsetY;
+
+        //     cvMatMul(&transl, &transf, &m_transform);
+
+        //     LOG_INFO("With offsets:");
+        //     OpenCvUtility::LogCvMat32F(&m_transform);
+
+        //     break;
+        // }
+    //    }
+
+    return successful;
+}
+
+/**
     Computes the external calibration parameters (rotation and translation) for a camera.
     @param boardSize The size of the chequer board calibration target
     @param metrics   Parameters describing dimensions of robot

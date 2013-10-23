@@ -53,6 +53,7 @@ public:
     virtual const QString CannotCloseReason() const;
 
 private slots:
+    void CalibrationTypeChanged(int index);
     void FromFileClicked();
     void CaptureLiveBtnClicked();
     void CaptureCancelBtnClicked();
@@ -70,7 +71,8 @@ private:
     const QString GetSubSchemaDefaultFileName() const;
 
     void AddImageIfValid( const QString& imageFileName,
-                          const WbConfigTools::FileNameMode& mode );
+                          const WbConfigTools::FileNameMode& mode,
+                          const bool colorCalibImage );
 
     ImageView* const CreateStreamingView( const QSize& imageSize );
 
@@ -78,7 +80,7 @@ private:
 
     static const WbSchema CreateSchema();
 
-    void FromFile(const QString relativePath);
+    void FromFile(const bool colorCalibFile);
 
     bool IsDataValid() const;
 
@@ -87,6 +89,9 @@ private:
     Ui::CameraCalibrationWidget* m_ui;
     CalibrationImageGridMapper* m_imageGridMapper;
     CalibrationImageTableMapper* m_imageTableMapper;
+
+    CalibrationImageGridMapper* m_colorImageGridMapper;
+    KeyId imageGridReturnId;
 };
 
 #endif // CAMERACALIBRATIONWIDGET_H

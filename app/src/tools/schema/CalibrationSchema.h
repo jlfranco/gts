@@ -66,6 +66,9 @@ namespace CalibrationSchema
     extern const KeyName grayBlueKey;
     extern const KeyName grayPercentageKey;
     extern const KeyName methodKey;
+
+    extern const KeyName colorCalibImageGroup;
+    extern const KeyName colorCalibImageFileKey;
 }
 
 #endif // SCHEMAKEYS_CALIBRATION_H_

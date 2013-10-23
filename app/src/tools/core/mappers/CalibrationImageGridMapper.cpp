@@ -88,15 +88,23 @@ void CalibrationImageGridMapper::OverlayCornersIfPossible( const WbConfig& confi
 
 void CalibrationImageGridMapper::UpdateImage( const WbConfig& config )
 {
-    const KeyValue cameraImageFile(config.GetKeyValue(CalibrationSchema::imageFileKey, m_currentImageId));
+    const KeyValue cameraImageFile = (!colorCalib)?
+        config.GetKeyValue(CalibrationSchema::imageFileKey, m_currentImageId):
+        config.GetKeyValue(CalibrationSchema::colorCalibImageFileKey, m_currentImageId);
     const QString fileName(config.GetAbsoluteFileNameFor(cameraImageFile.ToQString()));
 
     m_image = QImage(fileName).convertToFormat(QImage::Format_RGB888);
 }
 
-void CalibrationImageGridMapper::SetCurrentImage(const KeyId & imageId)
+void CalibrationImageGridMapper::SetCurrentImage(const KeyId & imageId, const bool isColorCalib)
 {
     m_currentImageId = imageId;
+    colorCalib = isColorCalib;
+}
+
+KeyId CalibrationImageGridMapper::GetCurrentImageKey()
+{
+    return m_currentImageId;
 }
 
 QImage CalibrationImageGridMapper::GetRealOrNotFoundImage() const

@@ -63,7 +63,7 @@ namespace CalibrationSchema
     const KeyName grayBlueKey                 ( "grayBlueKey" );
     const KeyName grayPercentageKey           ( "grayPercentageKey" );
     const KeyName methodKey                   ( "methodKey" );
+
+    const KeyName colorCalibImageGroup        ( "colorCalibImage" );
+    const KeyName colorCalibImageFileKey      ( "colorCalibImageFile" );
 }
-
-
-

@@ -1,6 +1,7 @@
 #ifndef COLORCALIBRATION_H
 #define COLORCALIBRATION_H
 
+
 #include <opencv2/core/core.hpp>
 
 
