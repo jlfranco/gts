@@ -11,6 +11,44 @@
 #include <cmath>
 #include <string>
 
+bool cholesky (cv::Mat & mat, cv::Mat & output)
+{
+    double sum;
+    assert(mat.depth() == CV_32F || mat.depth() == CV_64F);
+    output = cv::Mat::zeros(mat.rows, mat.cols, CV_64FC1);
+    for (int i = 0; i < mat.rows; ++i)
+    {
+        for (int j = 0; j <= i; ++j)
+        {
+            if (mat.depth() == CV_32F)
+            {
+                sum = double(mat.at<float>(i, j));
+            }
+            else
+            {
+                sum = mat.at<double>(i, j);
+            }
+            for (int k = 0; k < j ; ++k)
+            {
+                sum -= output.at<double>(i, k) * output.at<double>(j, k);
+            }
+            if (i == j)
+            {
+                if (sum <= 0)
+                {
+                    return false; // Matrix is not positive definite
+                }
+                output.at<double>(i, j) = sqrt(sum);
+            }
+            else
+            {
+                output.at<double>(i, j) = sum/output.at<double>(j, j);
+            }
+        }
+    }
+    return true; // Matrix is positive definite
+}
+
 ColorTracker::ColorTracker(const CameraCalibration * cam_calib,
                            const RobotMetrics * metrics,
                            const ColorCalibration * col_calib,

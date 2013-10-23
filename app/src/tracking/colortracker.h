@@ -6,6 +6,15 @@
 
 #include "RobotTracker.h"
 
+typedef cv::Vec<double, 5> SVec;
+typedef cv::Vec<double, 2> MVec;
+typedef cv::Vec<double, 10> XVec10;
+typedef cv::Vec<double, 7> XVec7;
+typedef cv::Matx<double, 5, 5> SCov;
+typedef cv::Matx<double, 2, 2> MCov;
+typedef cv::Matx<double, 10, 10> XCov10;
+typedef cv::Matx<double, 7, 7> XCov7;
+
 class CameraCalibration;
 class ColorCalibration;
 class RobotMetrics;
@@ -16,6 +25,12 @@ class RobotMetrics;
   colored blobs in a colored pattern and performing
   filtering on these measurements
   **/
+
+/* Utility function that decomposes a positive definite matrix A
+   into its so called matrix square root L so that L L' = A.
+   Returns false if matrix is not positive definite*/
+
+bool cholesky (cv::Mat & mat, cv::Mat & output);
 
 class ColorTracker : public RobotTracker
 {
@@ -112,10 +127,19 @@ private:
     cv::Point2f find_blob(const cv::Mat & input_image, double hue_ref,
         double hue_thr, double sat_thr);
 
+    void predict(double timeStamp);
+    void update_left(MVec measurement);
+    void update_right(MVec measurement);
+
     cv::Point2f m_pos;
     float m_angle;
 
     float m_error; // Keep this?
+
+    SVec m_current_state;
+    SCov m_current_cov;
+    std::vector<XVec10> SigmaPoints10(XVec10, XCov10);
+
 
     cv::Mat m_currImg;
     const IplImage * m_legacy_img;
