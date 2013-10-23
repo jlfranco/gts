@@ -64,8 +64,8 @@ private slots:
     //TODO implement us!
     void ColorFromFileClicked();
     void ColorCalibrateBtnClicked();
-    //    void HueLeftBtnClicked();
-    //    void HueRightBtnClicked();
+    void HueLeftBtnClicked();
+    void HueRightBtnClicked();
 
 private:
     const QString GetSubSchemaDefaultFileName() const;

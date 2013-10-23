@@ -152,6 +152,14 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
                       SIGNAL( clicked() ),
                       this,
                       SLOT( ColorFromFileClicked() ) );
+    QObject::connect( m_ui->m_hueLeftLabel,
+                      SIGNAL( clicked() ),
+                      this,
+                      SLOT( HueLeftBtnClicked() ) );
+    QObject::connect( m_ui->m_hueRightLabel,
+                      SIGNAL( clicked() ),
+                      this,
+                      SLOT( HueRightBtnClicked() ) );
     QObject::connect( m_ui->m_colorCalibrateBtn,
                       SIGNAL( clicked() ),
                       this,
@@ -377,6 +385,24 @@ void CameraCalibrationWidget::CaptureCancelBtnClicked()
     m_ui->m_captureCancelBtn->setEnabled(false);
     m_ui->m_captureLiveBtn->setEnabled(true);
     m_captureLiveBtnController->CaptureCancelBtnClicked();
+}
+
+void CameraCalibrationWidget::HueLeftBtnClicked()
+{
+    //TODO implement me
+    Message::Show( 0,
+                   tr( "Hue Left" ),
+                   tr( "NOT IMPLEMENTED!" ),
+                   Message::Severity_Critical );
+}
+
+void CameraCalibrationWidget::HueRightBtnClicked()
+{
+    //TODO implement me
+    Message::Show( 0,
+                   tr( "Hue Left" ),
+                   tr( "NOT IMPLEMENTED!" ),
+                   Message::Severity_Critical );
 }
 
 void CameraCalibrationWidget::ColorCalibrateBtnClicked()
