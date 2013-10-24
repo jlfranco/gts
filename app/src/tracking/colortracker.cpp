@@ -119,8 +119,30 @@ void ColorTracker::Activate()
 
 bool ColorTracker::Track(double timeStamp)
 {
-    /* Placeholder function */
-    return false;
+    double delta_t = timeStamp - m_current_timestamp;
+    if (delta_t >= 0)
+    {
+      m_current_timestamp = timeStamp;
+      MVec l_blob, r_blob;
+      bool found_l = find_blob(m_currImg, m_colorCal->getHueLeft(),
+          m_colorCal->getHueThr(), m_colorCal->getMinSat(), &l_blob);
+      bool found_r = find_blob(m_currImg, m_colorCal->getHueRight(),
+          m_colorCal->getHueThr(), m_colorCal->getMinSat(), &r_blob);
+      predict(delta_t);
+      if (found_l)
+      {
+        update(l_blob, -1);
+      }
+      if (found_r)
+      {
+        update(r_blob, 1);
+      }
+      return true;
+    }
+    else
+    {
+      return false;
+    }
 }
 
 void ColorTracker::DoInactiveProcessing(double timeStamp)
@@ -183,7 +205,8 @@ void ColorTracker::segment_blobs(const cv::Mat & input_image,
       luminance = current_pixel.val[2];
       distance = abs(hue - hue_ref);
       distance = distance > 180 ? (360 - distance) : distance;
-      if ( (min_luminance <= luminance && luminance <= max_luminance) &&
+      if ( ( m_colorCal->getMinLum() <= luminance &&
+             luminance <= m_colorCal->getMaxLum() ) &&
            (saturation >= sat_thr) && distance < hue_thr)
       {
         segmented_image.at<unsigned char>(i, j) = 255;
@@ -199,8 +222,8 @@ void ColorTracker::segment_blobs(const cv::Mat & input_image,
       CV_CHAIN_APPROX_SIMPLE);
 }
 
-cv::Point2f ColorTracker::find_blob(const cv::Mat & input_image, double hue_ref,
-    double hue_thr, double sat_thr)
+bool ColorTracker::find_blob(const cv::Mat & input_image, double hue_ref,
+    double hue_thr, double sat_thr, MVec * blob)
 {
   std::vector<std::vector<cv::Point2i> > contours;
   segment_blobs(input_image, &contours, hue_ref, hue_thr, sat_thr);
@@ -232,12 +255,15 @@ cv::Point2f ColorTracker::find_blob(const cv::Mat & input_image, double hue_ref,
     }
     centroid.x = centroid.x / (6*area);
     centroid.y = centroid.y / (6*area);
+    (*blob)[0] = centroid.x;
+    (*blob)[1] = centroid.y;
+    return true;
   }
   else
   {
-    centroid = cv::Point2f(-1., -1.);
+    blob = 0;
+    return false;
   }
-  return centroid;
 }
 
 void ColorTracker::predict(double delta_t)
@@ -317,6 +343,7 @@ void ColorTracker::predict(double delta_t)
 
 void ColorTracker::update(MVec measurement, int direction)
 {
+  // Direction can be -1 for left or 1 for right
   assert(direction == 1 || direction == -1);
   // First, construct the extended state vector and covariance matrix
   // to extract the sigma-points for prediction
@@ -403,8 +430,6 @@ void ColorTracker::update(MVec measurement, int direction)
               (*jt - predicted_meas) * (*jt - predicted_meas).t();
   }
   CCov cross_cov = CCov::zeros();
-  // Construct cross covariance
-  // ...
   for (int i = 0; i < sigma_points.size(); ++i)
   {
     cross_cov += sigma_weights[i] *

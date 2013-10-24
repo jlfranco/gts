@@ -20,6 +20,7 @@ class ColorCalibration
     // Accessors
     float getHueLeft() const { return m_hueLeft; }
     float getHueRight() const { return m_hueRight; }
+    float getHueThr() const { return m_hueThr; }
     float getMinLum() const { return m_minLum; }
     float getMaxLum() const { return m_maxLum; }
     float getMinSat() const { return m_minSat; }
@@ -28,6 +29,7 @@ class ColorCalibration
     float getGrayB() const { return m_gray_b; }
     void setHueLeft ( const float val ) { m_hueLeft = val; }
     void setHueRight ( const float val ) { m_hueRight = val; }
+    void setHueThr (const float val ) { m_hueThr = val; }
     void setMinLum ( const float val ) { m_minLum = val; }
     void setMaxLum ( const float val ) { m_maxLum = val; }
     void setMinSat ( const float val ) { m_minSat = val; }
@@ -38,6 +40,7 @@ class ColorCalibration
     protected:
     float m_hueLeft;
     float m_hueRight;
+    float m_hueThr;
     float m_minLum;
     float m_maxLum;
     float m_minSat;

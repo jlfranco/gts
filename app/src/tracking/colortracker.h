@@ -130,8 +130,8 @@ private:
         std::vector<std::vector<cv::Point2i> > * contours, double hue_ref,
         double hue_thr, double sat_thr);
 
-    cv::Point2f find_blob(const cv::Mat & input_image, double hue_ref,
-        double hue_thr, double sat_thr);
+    bool find_blob(const cv::Mat & input_image, double hue_ref,
+        double hue_thr, double sat_thr, MVec * blob);
 
     // Uses process model to predict the robot's next position
     void predict(double delta_t);
