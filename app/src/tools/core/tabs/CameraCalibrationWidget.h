@@ -37,7 +37,9 @@ class CameraHardware;
 class ImageView;
 class CaptureLiveBtnController;
 class CalibrationImageGridMapper;
+class SelectableImageGridMapper;
 class CalibrationImageTableMapper;
+class ColorCalibrationImageTableMapper;
 
 class CameraCalibrationWidget : public Tool
 {
@@ -53,7 +55,6 @@ public:
     virtual const QString CannotCloseReason() const;
 
 private slots:
-    void CalibrationTypeChanged(int index);
     void FromFileClicked();
     void CaptureLiveBtnClicked();
     void CaptureCancelBtnClicked();
@@ -66,6 +67,7 @@ private slots:
     void ColorCalibrateBtnClicked();
     void HueLeftBtnClicked();
     void HueRightBtnClicked();
+    void ImageTableItemChangedColor(QTableWidgetItem* current, QTableWidgetItem* previous);
 
 private:
     const QString GetSubSchemaDefaultFileName() const;
@@ -90,8 +92,8 @@ private:
     CalibrationImageGridMapper* m_imageGridMapper;
     CalibrationImageTableMapper* m_imageTableMapper;
 
-    CalibrationImageGridMapper* m_colorImageGridMapper;
-    KeyId imageGridReturnId;
+    SelectableImageGridMapper* m_imageGridMapperColor;
+    ColorCalibrationImageTableMapper* m_imageTableMapperColor;
 };
 
 #endif // CAMERACALIBRATIONWIDGET_H

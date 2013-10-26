@@ -66,4 +66,6 @@ namespace CalibrationSchema
 
     const KeyName colorCalibImageGroup        ( "colorCalibImage" );
     const KeyName colorCalibImageFileKey      ( "colorCalibImageFile" );
+    const KeyName colorCalibImageErrorKey     ( "colorCalibImageErrorKey" );
+
 }

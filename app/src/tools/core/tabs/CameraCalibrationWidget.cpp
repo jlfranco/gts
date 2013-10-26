@@ -21,7 +21,9 @@
 #include "ui_CameraCalibrationWidget.h"
 
 #include "CalibrationImageGridMapper.h"
+#include "SelectableImageGridMapper.h"
 #include "CalibrationImageTableMapper.h"
+#include "ColorCalibrationImageTableMapper.h"
 #include "VideoSource.h"
 #include "CameraHardware.h"
 #include "Message.h"
@@ -60,7 +62,9 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
     m_captureLiveBtnController(),
     m_ui          ( new Ui::CameraCalibrationWidget ),
     m_imageGridMapper( 0 ),
-    m_imageTableMapper( 0 )
+    m_imageTableMapper( 0 ),
+    m_imageGridMapperColor( 0 ),
+    m_imageTableMapperColor( 0 )
 {
     m_ui->setupUi( this );
 
@@ -69,6 +73,10 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
                                       *m_ui->m_captureCancelBtn, *this, m_cameraHardware ) );
 
     QHeaderView* horizHeader = m_ui->m_imagesTableWidget->horizontalHeader();
+    horizHeader->setResizeMode( 0, QHeaderView::Stretch );
+    horizHeader->setResizeMode( 1, QHeaderView::ResizeToContents );
+
+    horizHeader = m_ui->m_imagesTableWidgetColor->horizontalHeader();
     horizHeader->setResizeMode( 0, QHeaderView::Stretch );
     horizHeader->setResizeMode( 1, QHeaderView::ResizeToContents );
 
@@ -101,11 +109,13 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
 
     m_imageTableMapper = new CalibrationImageTableMapper( *m_ui->m_imagesTableWidget );
     AddMapper( m_imageTableMapper );
-
     m_imageGridMapper = new CalibrationImageGridMapper( *m_ui->m_imageGrid );
     AddMapper( m_imageGridMapper );
 
-    imageGridReturnId.clear();
+    m_imageTableMapperColor = new ColorCalibrationImageTableMapper( *m_ui->m_imagesTableWidgetColor );
+    AddMapper( m_imageTableMapperColor );
+    m_imageGridMapperColor = new SelectableImageGridMapper( *m_ui->m_imageGridColor );
+    AddMapper( m_imageGridMapperColor );
 
     AddMapper( new CalibrateCameraResultsMapper( *m_ui->m_resultsTextBrowser ) );
 
@@ -114,11 +124,6 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
 
     m_ui->m_calibrationType->setCurrentIndex( 0 );
     m_ui->m_optionsTabs->setCurrentIndex( 0 );
-
-    QObject::connect( m_ui->m_calibrationType,
-                      SIGNAL ( currentChanged(int) ),
-                      this,
-                      SLOT ( CalibrationTypeChanged(int) ));
 
     QObject::connect( m_ui->m_fromFileBtn,
                       SIGNAL( clicked() ),
@@ -146,6 +151,13 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
                       this,
                       SLOT( ImageTableItemChanged( QTableWidgetItem*,
                                                    QTableWidgetItem* ) ) );
+
+    QObject::connect( m_ui->m_imagesTableWidgetColor,
+                      SIGNAL( currentItemChanged ( QTableWidgetItem*,
+                                                   QTableWidgetItem* ) ),
+                      this,
+                      SLOT( ImageTableItemChangedColor( QTableWidgetItem*,
+                                                        QTableWidgetItem* ) ) );
 
 
     QObject::connect( m_ui->m_colorGetImageFromFileBtn,
@@ -177,22 +189,6 @@ const QString CameraCalibrationWidget::GetSubSchemaDefaultFileName() const
     return "calibration.xml";
 }
 
-void CameraCalibrationWidget::CalibrationTypeChanged(int index)
-{
-    if ( !index )
-    {
-        // this is the metric calibration tab
-        m_imageGridMapper->SetCurrentImage( imageGridReturnId.isNull()?"1":imageGridReturnId, false );
-    }
-    else
-    {
-        // this is the color calibration tab
-        imageGridReturnId = m_imageGridMapper->GetCurrentImageKey();
-        m_imageGridMapper->SetCurrentImage( "1", true );
-    }
-    ReloadCurrentConfig();
-}
-
 void CameraCalibrationWidget::ImageTableItemChanged(QTableWidgetItem* current,
                                                       QTableWidgetItem* previous)
 {
@@ -209,6 +205,24 @@ void CameraCalibrationWidget::ImageTableItemChanged(QTableWidgetItem* current,
                                      .toString(),
                                      false);
         ReloadCurrentConfig( m_imageTableMapper ); //must exclude table here to ensure it still has a "current row" for delete
+    }
+}
+
+void CameraCalibrationWidget::ImageTableItemChangedColor(QTableWidgetItem* current,
+                                                         QTableWidgetItem* previous)
+{
+    Q_UNUSED(previous);
+
+    assert( m_imageGridMapperColor );
+    if ( m_imageGridMapperColor && current )
+    {
+        QTableWidgetItem* currentRowNameItem =
+            m_ui->m_imagesTableWidget->item(current->row(),
+                                            ColorCalibrationImageTableMapper::nameColumn );
+        m_imageGridMapperColor->SetCurrentImage(
+            currentRowNameItem->data(ColorCalibrationImageTableMapper::idRoleOnName)
+                                     .toString());
+        ReloadCurrentConfig( m_imageTableMapperColor ); //must exclude table here to ensure it still has a "current row" for delete
     }
 }
 
@@ -331,6 +345,11 @@ void CameraCalibrationWidget::ReloadCurrentConfigToolSpecific()
                 GetCurrentConfig().GetKeyValues( CalibrationSchema::imageFileKey ) );
 
     m_ui->m_calibrateBtn->setEnabled( calibImages.size() >= 2 );
+
+    const WbKeyValues::ValueIdPairList colorCalibImages(
+                GetCurrentConfig().GetKeyValues( CalibrationSchema::colorCalibImageFileKey ) );
+
+    m_ui->m_colorCalibrateBtn->setEnabled( colorCalibImages.size() >= 1 );
 }
 
 void CameraCalibrationWidget::AddImageIfValid( const QString& imageFileName,
@@ -390,10 +409,11 @@ void CameraCalibrationWidget::CaptureCancelBtnClicked()
 void CameraCalibrationWidget::HueLeftBtnClicked()
 {
     //TODO implement me
-    Message::Show( 0,
-                   tr( "Hue Left" ),
-                   tr( "NOT IMPLEMENTED!" ),
-                   Message::Severity_Critical );
+    m_imageGridMapperColor->selectionMode( 1 );
+    // Message::Show( 0,
+    //                tr( "Hue Left" ),
+    //                tr( "NOT IMPLEMENTED!" ),
+    //                Message::Severity_Critical );
 }
 
 void CameraCalibrationWidget::HueRightBtnClicked()
@@ -571,7 +591,8 @@ const WbSchema CameraCalibrationWidget::CreateSchema()
 
     schema.AddKeyGroup( colorCalibImageGroup,
                         WbSchemaElement::Multiplicity::One,
-                        KeyNameList() << colorCalibImageFileKey );
+                        KeyNameList() << colorCalibImageFileKey
+                                      << colorCalibImageErrorKey );
 
     return schema;
 }

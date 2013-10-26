@@ -69,6 +69,7 @@ namespace CalibrationSchema
 
     extern const KeyName colorCalibImageGroup;
     extern const KeyName colorCalibImageFileKey;
+    extern const KeyName colorCalibImageErrorKey;
 }
 
 #endif // SCHEMAKEYS_CALIBRATION_H_
