@@ -10,6 +10,7 @@
 
 #include <cmath>
 #include <string>
+#include <iostream>
 
 bool cholesky (cv::Mat & mat, cv::Mat & output)
 {
@@ -53,13 +54,19 @@ ColorTracker::ColorTracker(const CameraCalibration * cam_calib,
                            const RobotMetrics * metrics,
                            const ColorCalibration * col_calib,
                            const IplImage * currentImage) :
-    m_pos      ( cv::Point2f(0, 0) ),
-    m_angle    ( 0 ),
-    m_error    ( 0 ),
-    m_cal      ( cam_calib ),
-    m_metrics  ( metrics ),
-    m_colorCal ( col_calib ),
-    m_currImg  ( cv::Mat(currentImage) )
+    m_pos               ( cv::Point2f(0, 0) ),
+    m_angle             ( 0 ),
+    m_error             ( 0 ),
+    m_cal               ( cam_calib ),
+    m_metrics           ( metrics ),
+    m_colorCal          ( col_calib ),
+    m_currImg           ( cv::Mat(currentImage) ),
+    m_kappa             ( -2 ), // This is to try out n + kappa = 3
+    m_initialized       ( false ),
+    m_current_timestamp ( 0 )
+/* What's missing:
+   - timestamp initialization (is it 0 or is it somehow offset?)
+*/
 {
 }
 
@@ -128,16 +135,55 @@ bool ColorTracker::Track(double timeStamp)
           m_colorCal->getHueThr(), m_colorCal->getMinSat(), &l_blob);
       bool found_r = find_blob(m_currImg, m_colorCal->getHueRight(),
           m_colorCal->getHueThr(), m_colorCal->getMinSat(), &r_blob);
-      predict(delta_t);
-      if (found_l)
+      if (m_initialized)
       {
-        update(l_blob, -1);
+        predict(delta_t);
+        if (found_l)
+        {
+          update(l_blob, -1);
+        }
+        if (found_r)
+        {
+          update(r_blob, 1);
+        }
       }
-      if (found_r)
+      else
       {
-        update(r_blob, 1);
+        if ( found_l && found_r )
+        {
+          MVec pos = 0.5 * ( (1 - m_dist_right + m_dist_left) * r_blob +
+                             (1 + m_dist_right - m_dist_left) * l_blob );
+          MVec dif = l_blob - r_blob;
+          m_pos.x = pos[0];
+          m_pos.y = pos[1];
+          m_angle = atan2(dif[1], dif[0]) + 0.5 * M_PI;
+          m_angle = m_angle>M_PI?m_angle-2*M_PI:m_angle;
+          m_current_state[0] = m_pos.x;
+          m_current_state[1] = m_pos.y;
+          m_current_state[2] = m_angle;
+          m_current_state[3] = 0;
+          m_current_state[4] = 0;
+          m_current_cov = SCov::zeros();
+          m_current_cov(0, 0) = 5;
+          m_current_cov(1, 1) = 5;
+          m_current_cov(2, 2) = M_PI/10;
+          m_current_cov(3, 3) = 5;
+          m_current_cov(4, 4) = M_PI/10;
+          // Set flag to initialized
+          m_initialized = true;
+        }
       }
-      return true;
+      if (m_initialized)
+      {
+        // Log everything
+        std::stringstream swriter;
+        swriter.precision(20); // Is this precision overkill?
+        swriter << m_current_state[3] << " " << m_current_state[4];
+        std::string sref = swriter.str();
+        m_history.emplace_back( TrackEntry(
+          GetPosition(), GetHeading(), GetError(), timeStamp, sref ) );
+        return true;
+      }
     }
     else
     {
@@ -147,12 +193,37 @@ bool ColorTracker::Track(double timeStamp)
 
 void ColorTracker::DoInactiveProcessing(double timeStamp)
 {
+    // If it is necessary (very low framerates causing very
+    // sporadic updates) this can be implemented as a simple
+    // call to predict(delta_t) after computing the elated
+    // time since the last change to the timestamp
     /* Placeholder function */
 }
 
 void ColorTracker::Rewind(double timeStamp)
 {
-    /* Placeholder function */
+    while (!m_history.empty())
+    {
+        TrackEntry entry = m_history.back();
+
+        if (entry.GetTimeStamp() > timeStamp)
+        {
+            m_pos = entry.GetPosition();
+            m_angle = entry.GetOrientation();
+            std::stringstream sreader(*(entry.GetString()));
+            sreader.precision(20);
+            m_current_state[0] = m_pos.x;
+            m_current_state[1] = m_pos.y;
+            m_current_state[2] = m_angle;
+            sreader >> m_current_state[3];
+            sreader >> m_current_state[4];
+            m_history.pop_back();
+        }
+        else
+        {
+            break;
+        }
+    }
 }
 
 void ColorTracker::SetParam(paramType param, float value)
@@ -187,8 +258,6 @@ void ColorTracker::segment_blobs(const cv::Mat & input_image,
   cv::Mat segmented_image = cv::Mat::zeros(
       input_image.rows, input_image.cols, CV_8UC1);
   double distance;
-  double min_luminance = 0.2*255;
-  double max_luminance = 0.9*255;
   double hue, saturation, luminance;
   cv::Vec3f current_pixel;
   cv::Mat small_strel = cv::getStructuringElement(cv::MORPH_ELLIPSE,

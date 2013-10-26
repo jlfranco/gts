@@ -139,6 +139,7 @@ private:
     // one for right measurement) to correct the predicted position.
     void update(MVec measurement, int direction);
 
+    bool m_initialized;
     cv::Point2f m_pos;
     float m_angle;
 
