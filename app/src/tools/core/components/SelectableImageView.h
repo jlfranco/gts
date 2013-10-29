@@ -68,6 +68,7 @@ private:
     const Qt::TransformationMode GetImageTransformationMode() const;
 
     QImage                  m_image;
+    QImage                  m_scaledImage;
     QPixmap                 m_scaledPixmap;
     Qt::AspectRatioMode     m_aspectRatioMode;
     std::auto_ptr< QLabel > m_captionLabel;
@@ -82,6 +83,8 @@ private:
     bool m_selectionStarted;
     bool m_drawSelection;
     QRect m_selectionRect;
+    QImage* imageSelection;//TODO remove me
+    QLabel* imageSelectionLabel;//TODO remove me
 
 };
 

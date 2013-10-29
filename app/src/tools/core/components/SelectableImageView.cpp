@@ -38,6 +38,11 @@ SelectableImageView::SelectableImageView( QWidget* parent, int id ) :
 {
     m_selectionStarted = false;
     m_drawSelection    = false;
+    m_selectionModeEnabled = false;
+
+    imageSelection = 0;
+    imageSelectionLabel = 0;
+
     const QPoint captionOffset( 20, 20 );
     m_captionLabel->move( captionOffset );
     m_captionLabel->setPalette( BlackOnWhitePalette() );
@@ -143,16 +148,16 @@ void SelectableImageView::UpdateScaledPixmap()
     }
     else
     {
-        QImage scaledImage( m_image.scaled( rect().size(),
-                                            m_aspectRatioMode,
-                                            GetImageTransformationMode() ) );
+        m_scaledImage = QImage ( m_image.scaled( rect().size(),
+                                                 m_aspectRatioMode,
+                                                 GetImageTransformationMode() ) );
 
         const Qt::ImageConversionFlags FAST_CONVERSION =
                     Qt::AutoColor |
                     Qt::ThresholdDither |
                     Qt::ThresholdAlphaDither;
 
-        m_scaledPixmap.convertFromImage( scaledImage, FAST_CONVERSION );
+        m_scaledPixmap.convertFromImage( m_scaledImage, FAST_CONVERSION );
     }
 }
 
@@ -209,18 +214,66 @@ void SelectableImageView::paintEvent( QPaintEvent* )
 
     if ( !m_scaledPixmap.isNull() )
     {
+        if ( m_drawSelection )
+        {
+            painter.setPen(QPen(QBrush(QColor(0,0,0,180)),4,Qt::DashLine));
+            painter.setBrush(QBrush(QColor(255,255,255,120)));
+ 
+            painter.drawRect(m_selectionRect);
+            m_drawSelection = false;
+            QColor color, colorAvg;
+            float r = 0.0f, g = 0.0f, b = 0.0f, a = 0.0f;
+            int pxCount = 0;
+
+            QPoint topLeft, bottomRight;
+            topLeft = m_selectionRect.topLeft();
+            bottomRight = m_selectionRect.bottomRight();
+
+            if ( imageSelectionLabel )
+            {
+                imageSelectionLabel->hide();
+                delete imageSelectionLabel;
+            }
+            if ( imageSelection )
+            {
+                delete imageSelection;
+            }
+            imageSelection = new QImage(m_selectionRect.size(), QImage::Format_RGB888);
+
+            for ( int x = topLeft.x(); x < bottomRight.x(); x++)
+            {
+                for ( int y = topLeft.y(); y < bottomRight.y(); y++ )
+                {
+                    color = m_scaledImage.pixel(x,y);
+                    r += color.redF();
+                    g += color.greenF();
+                    b += color.blueF();
+                    a += color.alphaF();
+                    pxCount++;
+
+                    imageSelection->setPixel(x-topLeft.x(),y-topLeft.y(),m_scaledImage.pixel(x,y));
+                }
+            }
+            float scale = 1.0f / float(pxCount);
+            colorAvg = QColor::fromRgbF(r*scale, g*scale, b*scale, a*scale);
+            QRgb colorAvgRGB = colorAvg.rgba();
+
+            imageSelectionLabel = new QLabel;
+            QPixmap colorAvgPixmap(m_selectionRect.size());
+            colorAvgPixmap.fill(colorAvg);
+            imageSelectionLabel->setPixmap(colorAvgPixmap);
+            //            imageSelectionLabel->setPixmap(QPixmap::fromImage(*imageSelection));
+            imageSelectionLabel->show();
+
+            r = r*scale; g = g*scale; b = b*scale; a = a*scale;
+            cout << "\tr:" << r << endl;
+            cout << "\tg:" << g << endl;
+            cout << "\tb:" << b << endl;
+            cout << "\ta:" << a << endl;
+        }
+
         /// @todo offset image so its centred in its space
         painter.drawPixmap( m_scaledPixmap.rect(), m_scaledPixmap );
-    }
-
-    if ( m_drawSelection )
-    {
-        painter.setPen(QPen(QBrush(QColor(0,0,0,180)),4,Qt::DashLine));
-        painter.setBrush(QBrush(QColor(255,255,255,120)));
- 
-        painter.drawRect(m_selectionRect);
-        //        m_ui->m_view->update();
-        m_drawSelection = false;
     }
 }
 
