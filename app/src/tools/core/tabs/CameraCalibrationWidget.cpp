@@ -177,6 +177,15 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
                       this,
                       SLOT( ColorCalibrateBtnClicked() ) );
 
+    QObject::connect( m_ui->m_imageGridColor,
+                      SIGNAL( hueSet(QRgb,bool) ),
+                      this,
+                      SLOT( HueChanged(QRgb, bool) ) );
+    QObject::connect( this,
+                      SIGNAL( hueLeftSet(QString) ),
+                      m_ui->m_hueLeft,
+                      SLOT( textChanged( QString ) ) );
+
 }
 
 CameraCalibrationWidget::~CameraCalibrationWidget()
@@ -425,6 +434,36 @@ void CameraCalibrationWidget::HueRightBtnClicked()
                    Message::Severity_Critical );
 }
 
+using namespace std;
+void CameraCalibrationWidget::HueChanged( QRgb val, bool left )
+{
+    // remove the alpha crap
+    QString valNum = QString::number(val,16);
+    valNum.remove(0,2);
+
+    // build hex only
+    QString hex = QString("#%1").arg(valNum);
+
+    // build format string
+    QString str = QString("background-color:%1;").arg(hex);
+
+
+    // set color and save info
+    if ( left )
+    {
+        m_ui->m_hueLeft->setStyleSheet(str);//TODO fix me, ungreen me.
+        emit hueLeftSet(hex);
+
+        cout << "Hue Left: ";
+    }
+    else
+    {
+        m_ui->m_hueRight->setStyleSheet(str);//TODO fix me, ungreen me.
+        cout << "Hue Right: ";
+    }
+    cout << val << endl;
+}
+
 void CameraCalibrationWidget::ColorCalibrateBtnClicked()
 {
     /*TODO implement me! */
@@ -569,9 +608,9 @@ const WbSchema CameraCalibrationWidget::CreateSchema()
                                       << grayPercentageKey
                                       << methodKey,
                         DefaultValueMap().WithDefault( hueLeftKey,
-                                                       KeyValue::from( "1,1,1" ) )
+                                                       KeyValue::from( "#FFFFFFFF" ) )
                                          .WithDefault( hueRightKey,
-                                                       KeyValue::from( "1,1,1" ) )
+                                                       KeyValue::from( "#FFFFFFFF" ) )
                                          .WithDefault( luminanceMaxKey,
                                                        KeyValue::from( 1 ) )
                                          .WithDefault( luminanceMinKey,

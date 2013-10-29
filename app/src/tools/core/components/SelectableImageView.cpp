@@ -40,14 +40,14 @@ SelectableImageView::SelectableImageView( QWidget* parent, int id ) :
     m_drawSelection    = false;
     m_selectionModeEnabled = false;
 
-    imageSelection = 0;
-    imageSelectionLabel = 0;
-
     const QPoint captionOffset( 20, 20 );
     m_captionLabel->move( captionOffset );
     m_captionLabel->setPalette( BlackOnWhitePalette() );
     m_captionLabel->setAutoFillBackground( true );
     SetCaption( "" );
+
+
+    this->setObjectName("m_currentImage");
 }
 
 /** @brief Remove currently-set image
@@ -214,6 +214,9 @@ void SelectableImageView::paintEvent( QPaintEvent* )
 
     if ( !m_scaledPixmap.isNull() )
     {
+        /// @todo offset image so its centred in its space
+        painter.drawPixmap( m_scaledPixmap.rect(), m_scaledPixmap );
+
         if ( m_drawSelection )
         {
             painter.setPen(QPen(QBrush(QColor(0,0,0,180)),4,Qt::DashLine));
@@ -225,24 +228,24 @@ void SelectableImageView::paintEvent( QPaintEvent* )
             float r = 0.0f, g = 0.0f, b = 0.0f, a = 0.0f;
             int pxCount = 0;
 
-            QPoint topLeft, bottomRight;
-            topLeft = m_selectionRect.topLeft();
-            bottomRight = m_selectionRect.bottomRight();
-
-            if ( imageSelectionLabel )
+            int x1, x2, y1, y2, iTmp;
+            m_selectionRect.getCoords(&x1, &y1, &x2, &y2);
+            if ( x2 < x1 )
             {
-                imageSelectionLabel->hide();
-                delete imageSelectionLabel;
+                iTmp = x1;
+                x1 = x2;
+                x2 = iTmp;
             }
-            if ( imageSelection )
+            if ( y2 < y1 )
             {
-                delete imageSelection;
+                iTmp = y1;
+                y1 = y2;
+                y2 = iTmp;
             }
-            imageSelection = new QImage(m_selectionRect.size(), QImage::Format_RGB888);
 
-            for ( int x = topLeft.x(); x < bottomRight.x(); x++)
+            for ( int x = x1; x < x2; x++)
             {
-                for ( int y = topLeft.y(); y < bottomRight.y(); y++ )
+                for ( int y = y1; y < y2; y++ )
                 {
                     color = m_scaledImage.pixel(x,y);
                     r += color.redF();
@@ -250,30 +253,20 @@ void SelectableImageView::paintEvent( QPaintEvent* )
                     b += color.blueF();
                     a += color.alphaF();
                     pxCount++;
-
-                    imageSelection->setPixel(x-topLeft.x(),y-topLeft.y(),m_scaledImage.pixel(x,y));
                 }
             }
             float scale = 1.0f / float(pxCount);
             colorAvg = QColor::fromRgbF(r*scale, g*scale, b*scale, a*scale);
             QRgb colorAvgRGB = colorAvg.rgba();
 
-            imageSelectionLabel = new QLabel;
-            QPixmap colorAvgPixmap(m_selectionRect.size());
-            colorAvgPixmap.fill(colorAvg);
-            imageSelectionLabel->setPixmap(colorAvgPixmap);
-            //            imageSelectionLabel->setPixmap(QPixmap::fromImage(*imageSelection));
-            imageSelectionLabel->show();
-
             r = r*scale; g = g*scale; b = b*scale; a = a*scale;
             cout << "\tr:" << r << endl;
             cout << "\tg:" << g << endl;
             cout << "\tb:" << b << endl;
             cout << "\ta:" << a << endl;
-        }
 
-        /// @todo offset image so its centred in its space
-        painter.drawPixmap( m_scaledPixmap.rect(), m_scaledPixmap );
+            emit hueChanged(colorAvgRGB, true);
+        }
     }
 }
 

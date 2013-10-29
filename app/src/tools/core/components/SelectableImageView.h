@@ -51,9 +51,11 @@ public:
 
     bool selectionMode( const int force = -1 );
 
- signals:
+signals:
     void onLeftClick( int id, int x, int y );
     void onRightClick( int id );
+
+    void hueChanged( QRgb val, bool left );
 
 protected:
     virtual void resizeEvent( QResizeEvent* );
@@ -83,9 +85,6 @@ private:
     bool m_selectionStarted;
     bool m_drawSelection;
     QRect m_selectionRect;
-    QImage* imageSelection;//TODO remove me
-    QLabel* imageSelectionLabel;//TODO remove me
-
 };
 
 #endif // SELECTABLEIMAGEVIEW_H

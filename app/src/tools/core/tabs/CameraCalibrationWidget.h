@@ -54,6 +54,9 @@ public:
     virtual bool CanClose() const;
     virtual const QString CannotCloseReason() const;
 
+public slots:
+    void HueChanged( QRgb val, bool left );
+
 private slots:
     void FromFileClicked();
     void CaptureLiveBtnClicked();
@@ -94,6 +97,10 @@ private:
 
     SelectableImageGridMapper* m_imageGridMapperColor;
     ColorCalibrationImageTableMapper* m_imageTableMapperColor;
+
+signals:
+    void hueLeftSet(QString text);
+
 };
 
 #endif // CAMERACALIBRATIONWIDGET_H

@@ -40,6 +40,10 @@ public:
 
 public slots:
      void updateImage( int id, const QImage& image, double fps );
+     void hueChanged(QRgb val, bool left);
+
+signals:
+     void hueSet(QRgb val, bool left);
 
 protected:
     virtual void resizeEvent( QResizeEvent* );
