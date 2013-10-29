@@ -414,14 +414,20 @@ void CameraCalibrationWidget::CaptureCancelBtnClicked()
 
 void CameraCalibrationWidget::HueLeftBtnClicked()
 {
-    m_imageGridMapperColor->selectionMode( 1 );
-    selectionMode = LEFT;
+    if ( m_ui->m_imagesTableWidgetColor->selectionModel()->selection().indexes().count() > 0 )
+    {
+        m_imageGridMapperColor->selectionMode( 1 );
+        selectionMode = LEFT;
+    }
 }
 
 void CameraCalibrationWidget::HueRightBtnClicked()
 {
-    m_imageGridMapperColor->selectionMode( 1 );
-    selectionMode = RIGHT;
+    if ( m_ui->m_imagesTableWidgetColor->selectionModel()->selection().indexes().count() > 0 )
+    {
+        m_imageGridMapperColor->selectionMode( 1 );
+        selectionMode = RIGHT;
+    }
 }
 
 using namespace std;
