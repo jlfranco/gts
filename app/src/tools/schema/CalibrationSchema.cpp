@@ -53,19 +53,19 @@ namespace CalibrationSchema
     const KeyName avgReprojectionErrorKey     ( "avgReprojectionError" );
 
     const KeyName colorCalibrationGroup       ( "colorCalibrationGroup" );
-    const KeyName hueLeftKey                  ( "hueLeftKey" );
-    const KeyName hueRightKey                 ( "hueRightKey" );
-    const KeyName luminanceMaxKey             ( "luminanceMaxKey" );
-    const KeyName luminanceMinKey             ( "luminanceMinKey" );
-    const KeyName saturationMinKey            ( "saturationMinKey" );
-    const KeyName grayRedKey                  ( "grayRedKey" );
-    const KeyName grayGreenKey                ( "grayGreenKey" );
-    const KeyName grayBlueKey                 ( "grayBlueKey" );
-    const KeyName grayPercentageKey           ( "grayPercentageKey" );
-    const KeyName methodKey                   ( "methodKey" );
+    const KeyName hueLeftKey                  ( "hueLeft" );
+    const KeyName hueRightKey                 ( "hueRight" );
+    const KeyName luminanceMaxKey             ( "luminanceMax" );
+    const KeyName luminanceMinKey             ( "luminanceMin" );
+    const KeyName saturationMinKey            ( "saturationMin" );
+    const KeyName grayRedKey                  ( "grayRed" );
+    const KeyName grayGreenKey                ( "grayGreen" );
+    const KeyName grayBlueKey                 ( "grayBlue" );
+    const KeyName grayPercentageKey           ( "grayPercentage" );
+    const KeyName methodKey                   ( "method" );
 
     const KeyName colorCalibImageGroup        ( "colorCalibImage" );
     const KeyName colorCalibImageFileKey      ( "colorCalibImageFile" );
-    const KeyName colorCalibImageErrorKey     ( "colorCalibImageErrorKey" );
+    const KeyName colorCalibImageErrorKey     ( "colorCalibImageError" );
 
 }
