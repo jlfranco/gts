@@ -55,7 +55,7 @@ public:
     virtual const QString CannotCloseReason() const;
 
 public slots:
-    void HueChanged( QRgb val, bool left );
+    void HueChanged( QRgb val );
 
 private slots:
     void FromFileClicked();
@@ -94,12 +94,14 @@ private:
     Ui::CameraCalibrationWidget* m_ui;
     CalibrationImageGridMapper* m_imageGridMapper;
     CalibrationImageTableMapper* m_imageTableMapper;
+    enum selectionModes {NONE, LEFT, RIGHT} selectionMode;
 
     SelectableImageGridMapper* m_imageGridMapperColor;
     ColorCalibrationImageTableMapper* m_imageTableMapperColor;
 
 signals:
     void hueLeftSet(QString text);
+    void hueRightSet(QString text);
 
 };
 

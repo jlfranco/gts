@@ -265,7 +265,7 @@ void SelectableImageView::paintEvent( QPaintEvent* )
             cout << "\tb:" << b << endl;
             cout << "\ta:" << a << endl;
 
-            emit hueChanged(colorAvgRGB, true);
+            emit hueChanged(colorAvgRGB);
         }
     }
 }

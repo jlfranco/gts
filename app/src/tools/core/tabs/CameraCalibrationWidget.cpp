@@ -116,6 +116,7 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
     AddMapper( m_imageTableMapperColor );
     m_imageGridMapperColor = new SelectableImageGridMapper( *m_ui->m_imageGridColor );
     AddMapper( m_imageGridMapperColor );
+    selectionMode = NONE;
 
     AddMapper( new CalibrateCameraResultsMapper( *m_ui->m_resultsTextBrowser ) );
 
@@ -178,13 +179,9 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
                       SLOT( ColorCalibrateBtnClicked() ) );
 
     QObject::connect( m_ui->m_imageGridColor,
-                      SIGNAL( hueSet(QRgb,bool) ),
+                      SIGNAL( hueSet(QRgb) ),
                       this,
-                      SLOT( HueChanged(QRgb, bool) ) );
-    QObject::connect( this,
-                      SIGNAL( hueLeftSet(QString) ),
-                      m_ui->m_hueLeft,
-                      SLOT( textChanged( QString ) ) );
+                      SLOT( HueChanged(QRgb) ) );
 
 }
 
@@ -226,7 +223,7 @@ void CameraCalibrationWidget::ImageTableItemChangedColor(QTableWidgetItem* curre
     if ( m_imageGridMapperColor && current )
     {
         QTableWidgetItem* currentRowNameItem =
-            m_ui->m_imagesTableWidget->item(current->row(),
+            m_ui->m_imagesTableWidgetColor->item(current->row(),
                                             ColorCalibrationImageTableMapper::nameColumn );
         m_imageGridMapperColor->SetCurrentImage(
             currentRowNameItem->data(ColorCalibrationImageTableMapper::idRoleOnName)
@@ -417,25 +414,18 @@ void CameraCalibrationWidget::CaptureCancelBtnClicked()
 
 void CameraCalibrationWidget::HueLeftBtnClicked()
 {
-    //TODO implement me
     m_imageGridMapperColor->selectionMode( 1 );
-    // Message::Show( 0,
-    //                tr( "Hue Left" ),
-    //                tr( "NOT IMPLEMENTED!" ),
-    //                Message::Severity_Critical );
+    selectionMode = LEFT;
 }
 
 void CameraCalibrationWidget::HueRightBtnClicked()
 {
-    //TODO implement me
-    Message::Show( 0,
-                   tr( "Hue Left" ),
-                   tr( "NOT IMPLEMENTED!" ),
-                   Message::Severity_Critical );
+    m_imageGridMapperColor->selectionMode( 1 );
+    selectionMode = RIGHT;
 }
 
 using namespace std;
-void CameraCalibrationWidget::HueChanged( QRgb val, bool left )
+void CameraCalibrationWidget::HueChanged( QRgb val )
 {
     // remove the alpha crap
     QString valNum = QString::number(val,16);
@@ -449,19 +439,21 @@ void CameraCalibrationWidget::HueChanged( QRgb val, bool left )
 
 
     // set color and save info
-    if ( left )
+    if ( selectionMode == LEFT )
     {
-        m_ui->m_hueLeft->setStyleSheet(str);//TODO fix me, ungreen me.
-        emit hueLeftSet(hex);
+        m_ui->m_hueLeft->setStyleSheet(str);
+        //        emit hueLeftSet(hex);
 
         cout << "Hue Left: ";
     }
     else
     {
-        m_ui->m_hueRight->setStyleSheet(str);//TODO fix me, ungreen me.
+        m_ui->m_hueRight->setStyleSheet(str);
+        //        emit hueRightSet(hex);
         cout << "Hue Right: ";
     }
-    cout << val << endl;
+    selectionMode = NONE;
+    cout << hex.toStdString() << endl;
 }
 
 void CameraCalibrationWidget::ColorCalibrateBtnClicked()

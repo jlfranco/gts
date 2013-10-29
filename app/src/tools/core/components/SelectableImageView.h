@@ -55,7 +55,7 @@ signals:
     void onLeftClick( int id, int x, int y );
     void onRightClick( int id );
 
-    void hueChanged( QRgb val, bool left );
+    void hueChanged( QRgb val );
 
 protected:
     virtual void resizeEvent( QResizeEvent* );

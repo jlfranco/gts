@@ -198,9 +198,9 @@ SelectableImageView* const SelectableImageGrid::AddImage( const QImage& image, c
     newSelectableImageView->SetImage( image );
 
     QObject::connect( newSelectableImageView,
-                      SIGNAL( hueChanged(QRgb, bool) ),
+                      SIGNAL( hueChanged(QRgb) ),
                       this,
-                      SLOT(hueChanged(QRgb, bool)));
+                      SLOT(hueChanged(QRgb)));
 
     static const bool PRESERVE_ASPECT_RATIO = true;
     newSelectableImageView->SetPreserveAspectRatio( PRESERVE_ASPECT_RATIO );
@@ -269,9 +269,9 @@ void SelectableImageGrid::updateImage( int id, const QImage& image, double fps )
     m_imageViews[id].get()->update();
 }
 
-void SelectableImageGrid::hueChanged( QRgb val, bool left )
+void SelectableImageGrid::hueChanged( QRgb val )
 {
     using namespace std;
-    cout << "Grid hue left: " << val << endl;
-    emit hueSet(val,left);
+    cout << "Grid hue: " << val << endl;
+    emit hueSet(val);
 }
