@@ -20,7 +20,6 @@
 
 #include "ui_SelectableImageGrid.h"
 
-#include <iostream>
 #include <cmath>
 #include <cassert>
 #include <algorithm>
@@ -271,7 +270,5 @@ void SelectableImageGrid::updateImage( int id, const QImage& image, double fps )
 
 void SelectableImageGrid::hueChanged( QRgb val )
 {
-    using namespace std;
-    cout << "Grid hue: " << val << endl;
     emit hueSet(val);
 }
