@@ -100,11 +100,6 @@ private:
     ColorCalibrationImageTableMapper* m_imageTableMapperColor;
     QString hueLeft;
     QString hueRight;
-
-signals:
-    void hueLeftSet(QString text);
-    void hueRightSet(QString text);
-
 };
 
 #endif // CAMERACALIBRATIONWIDGET_H
