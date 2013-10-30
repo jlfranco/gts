@@ -575,7 +575,16 @@ p, li { white-space: pre-wrap; }
              <attribute name="title">
               <string>Color Calibration</string>
              </attribute>
-             <layout class="QGridLayout" name="gridLayout_4" columnstretch="2,1">
+             <layout class="QGridLayout" name="gridLayout_4" columnstretch="2,1,0">
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item row="0" column="0">
+               <widget class="SelectableImageGrid" name="m_imageGridColor" native="true"/>
+              </item>
               <item row="0" column="1">
                <layout class="QVBoxLayout" name="verticalLayout_4">
                 <property name="spacing">
@@ -594,18 +603,18 @@ p, li { white-space: pre-wrap; }
                     <number>0</number>
                    </property>
                    <property name="verticalSpacing">
-                    <number>0</number>
+                    <number>3</number>
                    </property>
-                   <item row="0" column="0">
+                   <item row="1" column="0">
                     <layout class="QVBoxLayout" name="verticalLayout">
                      <property name="spacing">
-                      <number>3</number>
+                      <number>0</number>
                      </property>
                      <property name="topMargin">
                       <number>0</number>
                      </property>
                      <item>
-                      <layout class="QHBoxLayout" name="horizontalLayout_9">
+                      <layout class="QHBoxLayout" name="horizontalLayout_9" stretch="6,5">
                        <item>
                         <widget class="QPushButton" name="m_hueLeftLabel">
                          <property name="text">
@@ -626,7 +635,21 @@ p, li { white-space: pre-wrap; }
                       </layout>
                      </item>
                      <item>
-                      <layout class="QHBoxLayout" name="horizontalLayout_18">
+                      <layout class="QHBoxLayout" name="horizontalLayout_7" stretch="6,5">
+                       <item>
+                        <widget class="QLabel" name="label">
+                         <property name="text">
+                          <string>Distance Left</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLineEdit" name="m_distLeft"/>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="horizontalLayout_18" stretch="6,5">
                        <item>
                         <widget class="QPushButton" name="m_hueRightLabel">
                          <property name="text">
@@ -647,7 +670,39 @@ p, li { white-space: pre-wrap; }
                       </layout>
                      </item>
                      <item>
-                      <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="2,1">
+                      <layout class="QHBoxLayout" name="horizontalLayout_11" stretch="6,5">
+                       <item>
+                        <widget class="QLabel" name="label_2">
+                         <property name="text">
+                          <string>Distance Right</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLineEdit" name="m_distRight"/>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="horizontalLayout_19" stretch="6,5">
+                       <item>
+                        <widget class="QLabel" name="label_9">
+                         <property name="text">
+                          <string>Hue Threshold</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLineEdit" name="m_hueThreshold">
+                         <property name="maxLength">
+                          <number>9</number>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="horizontalLayout_10" stretch="6,5">
                        <item>
                         <widget class="QLabel" name="labelx">
                          <property name="text">
@@ -661,7 +716,7 @@ p, li { white-space: pre-wrap; }
                       </layout>
                      </item>
                      <item>
-                      <layout class="QHBoxLayout" name="horizontalLayout_13" stretch="2,1">
+                      <layout class="QHBoxLayout" name="horizontalLayout_13" stretch="6,5">
                        <item>
                         <widget class="QLabel" name="label_4">
                          <property name="text">
@@ -675,7 +730,7 @@ p, li { white-space: pre-wrap; }
                       </layout>
                      </item>
                      <item>
-                      <layout class="QHBoxLayout" name="horizontalLayout_12" stretch="2,1">
+                      <layout class="QHBoxLayout" name="horizontalLayout_12" stretch="6,5">
                        <item>
                         <widget class="QLabel" name="label_3">
                          <property name="text">
@@ -689,58 +744,45 @@ p, li { white-space: pre-wrap; }
                       </layout>
                      </item>
                      <item>
-                      <layout class="QHBoxLayout" name="horizontalLayout_15" stretch="2,1">
+                      <layout class="QHBoxLayout" name="horizontalLayout_15" stretch="2">
                        <item>
                         <widget class="QLabel" name="label_6">
                          <property name="text">
-                          <string>Gray Red</string>
+                          <string>Gray Levels (R,G,B,%)</string>
                          </property>
                         </widget>
-                       </item>
-                       <item>
-                        <widget class="QLineEdit" name="m_grayRed"/>
                        </item>
                       </layout>
                      </item>
                      <item>
-                      <layout class="QHBoxLayout" name="horizontalLayout_16" stretch="2,1">
+                      <layout class="QHBoxLayout" name="horizontalLayout_16" stretch="0,0,0,0">
                        <item>
-                        <widget class="QLabel" name="label_7">
-                         <property name="text">
-                          <string>Gray Green</string>
+                        <widget class="QLineEdit" name="m_grayRed">
+                         <property name="placeholderText">
+                          <string>Red</string>
                          </property>
                         </widget>
                        </item>
                        <item>
-                        <widget class="QLineEdit" name="m_grayGreen"/>
-                       </item>
-                      </layout>
-                     </item>
-                     <item>
-                      <layout class="QHBoxLayout" name="horizontalLayout_17" stretch="2,1">
-                       <item>
-                        <widget class="QLabel" name="label_8">
-                         <property name="text">
-                          <string>Gray Blue</string>
+                        <widget class="QLineEdit" name="m_grayGreen">
+                         <property name="placeholderText">
+                          <string>Green</string>
                          </property>
                         </widget>
                        </item>
                        <item>
-                        <widget class="QLineEdit" name="m_grayBlue"/>
-                       </item>
-                      </layout>
-                     </item>
-                     <item>
-                      <layout class="QHBoxLayout" name="horizontalLayout_14" stretch="2,1">
-                       <item>
-                        <widget class="QLabel" name="label_5">
-                         <property name="text">
-                          <string>Gray Percentage</string>
+                        <widget class="QLineEdit" name="m_grayBlue">
+                         <property name="placeholderText">
+                          <string>Blue</string>
                          </property>
                         </widget>
                        </item>
                        <item>
-                        <widget class="QLineEdit" name="m_grayPercentage"/>
+                        <widget class="QLineEdit" name="m_grayPercentage">
+                         <property name="placeholderText">
+                          <string>%</string>
+                         </property>
+                        </widget>
                        </item>
                       </layout>
                      </item>
@@ -776,13 +818,13 @@ p, li { white-space: pre-wrap; }
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_6">
                    <property name="topMargin">
-                    <number>6</number>
+                    <number>0</number>
                    </property>
                    <property name="bottomMargin">
-                    <number>6</number>
+                    <number>0</number>
                    </property>
                    <item>
-                    <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="0">
+                    <layout class="QHBoxLayout" name="horizontalLayout_6" stretch="0,0">
                      <property name="spacing">
                       <number>6</number>
                      </property>
@@ -799,6 +841,13 @@ p, li { white-space: pre-wrap; }
                        </property>
                        <property name="flat">
                         <bool>false</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="QPushButton" name="m_colorCalibrateBtn">
+                       <property name="text">
+                        <string>&amp;Color Calibrate</string>
                        </property>
                       </widget>
                      </item>
@@ -935,43 +984,7 @@ p, li { white-space: pre-wrap; }
                   </layout>
                  </widget>
                 </item>
-                <item>
-                 <layout class="QVBoxLayout" name="verticalLayout_7" stretch="0">
-                  <property name="spacing">
-                   <number>6</number>
-                  </property>
-                  <property name="leftMargin">
-                   <number>18</number>
-                  </property>
-                  <property name="rightMargin">
-                   <number>10</number>
-                  </property>
-                  <item>
-                   <widget class="QPushButton" name="m_colorCalibrateBtn">
-                    <property name="text">
-                     <string>&amp;Color Calibrate</string>
-                    </property>
-                   </widget>
-                  </item>
-                 </layout>
-                </item>
-                <item>
-                 <spacer name="colorVerticalSpacer">
-                  <property name="orientation">
-                   <enum>Qt::Vertical</enum>
-                  </property>
-                  <property name="sizeHint" stdset="0">
-                   <size>
-                    <width>17</width>
-                    <height>13</height>
-                   </size>
-                  </property>
-                 </spacer>
-                </item>
                </layout>
-              </item>
-              <item row="0" column="0">
-               <widget class="SelectableImageGrid" name="m_imageGridColor" native="true"/>
               </item>
              </layout>
             </widget>

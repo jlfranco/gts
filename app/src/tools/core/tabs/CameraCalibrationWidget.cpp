@@ -96,6 +96,7 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
                                       CalibrationSchema::gridRowsKey,
                                       CalibrationSchema::gridColumnsKey ) );
 
+    AddMapper( CalibrationSchema::hueThresholdKey, m_ui->m_hueThreshold );
     AddMapper( CalibrationSchema::luminanceMaxKey, m_ui->m_luminanceMax );
     AddMapper( CalibrationSchema::luminanceMinKey, m_ui->m_luminanceMin );
     AddMapper( CalibrationSchema::saturationMinKey, m_ui->m_saturationMin );
@@ -104,6 +105,8 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
     AddMapper( CalibrationSchema::grayBlueKey, m_ui->m_grayBlue );
     AddMapper( CalibrationSchema::grayPercentageKey, m_ui->m_grayPercentage );
     AddMapper( CalibrationSchema::methodKey, m_ui->m_method );
+    AddMapper( CalibrationSchema::distLeftKey, m_ui->m_distLeft );
+    AddMapper( CalibrationSchema::distRightKey, m_ui->m_distRight );
 
     m_imageTableMapper = new CalibrationImageTableMapper( *m_ui->m_imagesTableWidget );
     AddMapper( m_imageTableMapper );
@@ -608,6 +611,7 @@ const WbSchema CameraCalibrationWidget::CreateSchema()
                         WbSchemaElement::Multiplicity::One,
                         KeyNameList() << hueLeftKey
                                       << hueRightKey
+                                      << hueThresholdKey
                                       << luminanceMaxKey
                                       << luminanceMinKey
                                       << saturationMinKey
@@ -615,11 +619,15 @@ const WbSchema CameraCalibrationWidget::CreateSchema()
                                       << grayGreenKey
                                       << grayBlueKey
                                       << grayPercentageKey
+                                      << distLeftKey
+                                      << distRightKey
                                       << methodKey,
                         DefaultValueMap().WithDefault( hueLeftKey,
                                                        KeyValue::from( "#FFFFFF" ) )
                                          .WithDefault( hueRightKey,
                                                        KeyValue::from( "#FFFFFF" ) )
+                                         .WithDefault( hueThresholdKey,
+                                                       KeyValue::from( 0.3 ) )
                                          .WithDefault( luminanceMaxKey,
                                                        KeyValue::from( 1 ) )
                                          .WithDefault( luminanceMinKey,

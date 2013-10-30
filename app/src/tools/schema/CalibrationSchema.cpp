@@ -55,6 +55,7 @@ namespace CalibrationSchema
     const KeyName colorCalibrationGroup       ( "colorCalibrationGroup" );
     const KeyName hueLeftKey                  ( "hueLeft" );
     const KeyName hueRightKey                 ( "hueRight" );
+    const KeyName hueThresholdKey             ( "hueThreshold" );
     const KeyName luminanceMaxKey             ( "luminanceMax" );
     const KeyName luminanceMinKey             ( "luminanceMin" );
     const KeyName saturationMinKey            ( "saturationMin" );
@@ -63,6 +64,8 @@ namespace CalibrationSchema
     const KeyName grayBlueKey                 ( "grayBlue" );
     const KeyName grayPercentageKey           ( "grayPercentage" );
     const KeyName methodKey                   ( "method" );
+    const KeyName distLeftKey                 ( "distLeft" );
+    const KeyName distRightKey                ( "distRight" );
 
     const KeyName colorCalibImageGroup        ( "colorCalibImage" );
     const KeyName colorCalibImageFileKey      ( "colorCalibImageFile" );

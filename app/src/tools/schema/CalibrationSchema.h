@@ -58,6 +58,7 @@ namespace CalibrationSchema
     extern const KeyName colorCalibrationGroup;
     extern const KeyName hueLeftKey;
     extern const KeyName hueRightKey;
+    extern const KeyName hueThresholdKey;
     extern const KeyName luminanceMaxKey;
     extern const KeyName luminanceMinKey;
     extern const KeyName saturationMinKey;
@@ -66,6 +67,8 @@ namespace CalibrationSchema
     extern const KeyName grayBlueKey;
     extern const KeyName grayPercentageKey;
     extern const KeyName methodKey;
+    extern const KeyName distLeftKey;
+    extern const KeyName distRightKey;
 
     extern const KeyName colorCalibImageGroup;
     extern const KeyName colorCalibImageFileKey;
