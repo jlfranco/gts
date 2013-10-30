@@ -617,9 +617,9 @@ const WbSchema CameraCalibrationWidget::CreateSchema()
                                       << grayPercentageKey
                                       << methodKey,
                         DefaultValueMap().WithDefault( hueLeftKey,
-                                                       KeyValue::from( "#FFFFFFFF" ) )
+                                                       KeyValue::from( "#FFFFFF" ) )
                                          .WithDefault( hueRightKey,
-                                                       KeyValue::from( "#FFFFFFFF" ) )
+                                                       KeyValue::from( "#FFFFFF" ) )
                                          .WithDefault( luminanceMaxKey,
                                                        KeyValue::from( 1 ) )
                                          .WithDefault( luminanceMinKey,
@@ -635,7 +635,7 @@ const WbSchema CameraCalibrationWidget::CreateSchema()
                                          .WithDefault( grayPercentageKey,
                                                        KeyValue::from( 0.5 ) )
                                          .WithDefault( methodKey,
-                                                       KeyValue::from( 0 ) ));
+                                                       KeyValue::from( true ) ));
 
     schema.AddKeyGroup( colorCalibImageGroup,
                         WbSchemaElement::Multiplicity::One,
