@@ -73,7 +73,7 @@ private:
     QImage                  m_scaledImage;
     QPixmap                 m_scaledPixmap;
     Qt::AspectRatioMode     m_aspectRatioMode;
-    std::auto_ptr< QLabel > m_captionLabel;
+    std::unique_ptr< QLabel > m_captionLabel;
     double                  m_framesPerSec;
     ConversionMethod        m_conversionMethod;
 
