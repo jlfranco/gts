@@ -10,6 +10,7 @@
 
 #include <cmath>
 #include <string>
+#include <iostream>
 
 bool cholesky (cv::Mat & mat, cv::Mat & output)
 {
@@ -53,13 +54,19 @@ ColorTracker::ColorTracker(const CameraCalibration * cam_calib,
                            const RobotMetrics * metrics,
                            const ColorCalibration * col_calib,
                            const IplImage * currentImage) :
-    m_pos      ( cv::Point2f(0, 0) ),
-    m_angle    ( 0 ),
-    m_error    ( 0 ),
-    m_cal      ( cam_calib ),
-    m_metrics  ( metrics ),
-    m_colorCal ( col_calib ),
-    m_currImg  ( cv::Mat(currentImage) )
+    m_pos               ( cv::Point2f(0, 0) ),
+    m_angle             ( 0 ),
+    m_error             ( 0 ),
+    m_cal               ( cam_calib ),
+    m_metrics           ( metrics ),
+    m_colorCal          ( col_calib ),
+    m_currImg           ( cv::Mat(currentImage) ),
+    m_kappa             ( -2 ), // This is to try out n + kappa = 3
+    m_initialized       ( false ),
+    m_current_timestamp ( 0 )
+/* What's missing:
+   - timestamp initialization (is it 0 or is it somehow offset?)
+*/
 {
 }
 
@@ -119,18 +126,104 @@ void ColorTracker::Activate()
 
 bool ColorTracker::Track(double timeStamp)
 {
-    /* Placeholder function */
-    return false;
+    double delta_t = timeStamp - m_current_timestamp;
+    if (delta_t >= 0)
+    {
+      m_current_timestamp = timeStamp;
+      MVec l_blob, r_blob;
+      bool found_l = find_blob(m_currImg, m_colorCal->getHueLeft(),
+          m_colorCal->getHueThr(), m_colorCal->getMinSat(), &l_blob);
+      bool found_r = find_blob(m_currImg, m_colorCal->getHueRight(),
+          m_colorCal->getHueThr(), m_colorCal->getMinSat(), &r_blob);
+      if (m_initialized)
+      {
+        predict(delta_t);
+        if (found_l)
+        {
+          update(l_blob, -1);
+        }
+        if (found_r)
+        {
+          update(r_blob, 1);
+        }
+      }
+      else
+      {
+        if ( found_l && found_r )
+        {
+          MVec pos = 0.5 * ( (1 - m_dist_right + m_dist_left) * r_blob +
+                             (1 + m_dist_right - m_dist_left) * l_blob );
+          MVec dif = l_blob - r_blob;
+          m_pos.x = pos[0];
+          m_pos.y = pos[1];
+          m_angle = atan2(dif[1], dif[0]) + 0.5 * M_PI;
+          m_angle = m_angle>M_PI?m_angle-2*M_PI:m_angle;
+          m_current_state[0] = m_pos.x;
+          m_current_state[1] = m_pos.y;
+          m_current_state[2] = m_angle;
+          m_current_state[3] = 0;
+          m_current_state[4] = 0;
+          m_current_cov = SCov::zeros();
+          m_current_cov(0, 0) = 5;
+          m_current_cov(1, 1) = 5;
+          m_current_cov(2, 2) = M_PI/10;
+          m_current_cov(3, 3) = 5;
+          m_current_cov(4, 4) = M_PI/10;
+          // Set flag to initialized
+          m_initialized = true;
+        }
+      }
+      if (m_initialized)
+      {
+        // Log everything
+        std::stringstream swriter;
+        swriter.precision(20); // Is this precision overkill?
+        swriter << m_current_state[3] << " " << m_current_state[4];
+        std::string sref = swriter.str();
+        m_history.emplace_back( TrackEntry(
+          GetPosition(), GetHeading(), GetError(), timeStamp, sref ) );
+        return true;
+      }
+    }
+    else
+    {
+      return false;
+    }
 }
 
 void ColorTracker::DoInactiveProcessing(double timeStamp)
 {
+    // If it is necessary (very low framerates causing very
+    // sporadic updates) this can be implemented as a simple
+    // call to predict(delta_t) after computing the elated
+    // time since the last change to the timestamp
     /* Placeholder function */
 }
 
 void ColorTracker::Rewind(double timeStamp)
 {
-    /* Placeholder function */
+    while (!m_history.empty())
+    {
+        TrackEntry entry = m_history.back();
+
+        if (entry.GetTimeStamp() > timeStamp)
+        {
+            m_pos = entry.GetPosition();
+            m_angle = entry.GetOrientation();
+            std::stringstream sreader(*(entry.GetString()));
+            sreader.precision(20);
+            m_current_state[0] = m_pos.x;
+            m_current_state[1] = m_pos.y;
+            m_current_state[2] = m_angle;
+            sreader >> m_current_state[3];
+            sreader >> m_current_state[4];
+            m_history.pop_back();
+        }
+        else
+        {
+            break;
+        }
+    }
 }
 
 void ColorTracker::SetParam(paramType param, float value)
@@ -165,8 +258,6 @@ void ColorTracker::segment_blobs(const cv::Mat & input_image,
   cv::Mat segmented_image = cv::Mat::zeros(
       input_image.rows, input_image.cols, CV_8UC1);
   double distance;
-  double min_luminance = 0.2*255;
-  double max_luminance = 0.9*255;
   double hue, saturation, luminance;
   cv::Vec3f current_pixel;
   cv::Mat small_strel = cv::getStructuringElement(cv::MORPH_ELLIPSE,
@@ -183,7 +274,8 @@ void ColorTracker::segment_blobs(const cv::Mat & input_image,
       luminance = current_pixel.val[2];
       distance = abs(hue - hue_ref);
       distance = distance > 180 ? (360 - distance) : distance;
-      if ( (min_luminance <= luminance && luminance <= max_luminance) &&
+      if ( ( m_colorCal->getMinLum() <= luminance &&
+             luminance <= m_colorCal->getMaxLum() ) &&
            (saturation >= sat_thr) && distance < hue_thr)
       {
         segmented_image.at<unsigned char>(i, j) = 255;
@@ -199,8 +291,8 @@ void ColorTracker::segment_blobs(const cv::Mat & input_image,
       CV_CHAIN_APPROX_SIMPLE);
 }
 
-cv::Point2f ColorTracker::find_blob(const cv::Mat & input_image, double hue_ref,
-    double hue_thr, double sat_thr)
+bool ColorTracker::find_blob(const cv::Mat & input_image, double hue_ref,
+    double hue_thr, double sat_thr, MVec * blob)
 {
   std::vector<std::vector<cv::Point2i> > contours;
   segment_blobs(input_image, &contours, hue_ref, hue_thr, sat_thr);
@@ -225,15 +317,208 @@ cv::Point2f ColorTracker::find_blob(const cv::Mat & input_image, double hue_ref,
         p1 = *(it + 1);
       }
       area += 0.5 * double(p0.x * p1.y - p0.y * p1.x);
-      centroid.x = centroid.x + double((p0.x + p1.x) * (p0.x * p1.y - p0.y * p1.x));
-      centroid.y = centroid.y + double((p0.y + p1.y) * (p0.x * p1.y - p0.y * p1.x));
+      centroid.x = centroid.x +
+          double((p0.x + p1.x) * (p0.x * p1.y - p0.y * p1.x));
+      centroid.y = centroid.y +
+          double((p0.y + p1.y) * (p0.x * p1.y - p0.y * p1.x));
     }
     centroid.x = centroid.x / (6*area);
     centroid.y = centroid.y / (6*area);
+    (*blob)[0] = centroid.x;
+    (*blob)[1] = centroid.y;
+    return true;
   }
   else
   {
-    centroid = cv::Point2f(-1., -1.);
+    blob = 0;
+    return false;
   }
-  return centroid;
+}
+
+void ColorTracker::predict(double delta_t)
+{
+  // First, construct the extended state vector and covariance matrix
+  // to extract the sigma-points for prediction
+  XVec10 extended_state;
+  for (int i = 0; i < 5; ++i)
+  {
+      extended_state[i] = m_current_state(i);
+      extended_state[i+5] = 0;
+  }
+  XCov10 extended_covariance = XCov10::zeros();
+  for (int i = 0; i < 5; ++i)
+  {
+      for (int j = 0; j < 5; ++j)
+      {
+          extended_covariance(i, j) = m_current_cov(i, j);
+          extended_covariance(i+5, j+5) = m_proc_noise_cov(i, j);
+      }
+  }
+  // Obtain vector of sigma points and corresponding weights
+  cv::Mat cov_as_mat = (10 + m_kappa) * cv::Mat(extended_covariance);
+  cv::Mat decomposed_cov;
+  cholesky(cov_as_mat, decomposed_cov);
+  std::vector<double> sigma_weights;
+  std::vector<XVec10> sigma_points;
+  sigma_points.push_back(extended_state);
+  sigma_weights.push_back(m_kappa/(m_kappa + 10));
+  XVec10 current_col;
+  for (int i = 0; i < 10; ++i)
+  {
+      decomposed_cov.col(i).copyTo(current_col);
+      sigma_points.push_back(
+                  extended_state + current_col);
+      sigma_points.push_back(
+                  extended_state - current_col);
+      sigma_weights.push_back(0.5/(m_kappa + 10));
+      sigma_weights.push_back(0.5/(m_kappa + 10));
+  }
+  // Transform sigma points according to the process model
+  std::vector<SVec> transformed_points;
+  SVec new_point;
+  std::vector<XVec10>::iterator it;
+  std::vector<SVec>::iterator jt;
+  for (it = sigma_points.begin(); it != sigma_points.end(); ++it)
+  {
+      new_point[0] = (*it)[0] + delta_t * (*it)[3] * cos((*it)[2]);
+      new_point[1] = (*it)[1] + delta_t * (*it)[3] * sin((*it)[2]);
+      new_point[2] = (*it)[2] + delta_t * (*it)[4];
+      new_point[3] = (*it)[3];
+      new_point[4] = (*it)[4];
+      transformed_points.push_back(new_point);
+  }
+  // Recover new mean and covariance;
+  SVec weighted_mean;
+  weighted_mean *= 0; // Make sure elements are initialized to 0
+  std::vector<double>::iterator wt;
+  for (jt = transformed_points.begin(), wt = sigma_weights.begin();
+       jt != transformed_points.end(); ++jt, ++wt)
+  {
+      weighted_mean += (*wt) * (*jt);
+  }
+  SCov weighted_cov = SCov::zeros();
+  for (jt = transformed_points.begin(), wt = sigma_weights.begin();
+       jt != transformed_points.end(); ++jt, ++wt)
+  {
+      weighted_cov += (*wt) *
+              (*jt - weighted_mean) * (*jt - weighted_mean).t();
+  }
+  m_current_state = weighted_mean;
+  m_current_cov = weighted_cov;
+  m_pos.x = m_current_state[0];
+  m_pos.y = m_current_state[1];
+  m_angle = m_current_state[2];
+}
+
+void ColorTracker::update(MVec measurement, int direction)
+{
+  // Direction can be -1 for left or 1 for right
+  assert(direction == 1 || direction == -1);
+  // First, construct the extended state vector and covariance matrix
+  // to extract the sigma-points for prediction
+  XVec7 extended_state;
+  for (int i = 0; i < 5; ++i)
+  {
+      extended_state[i] = m_current_state(i);
+  }
+  extended_state[5] = 0;
+  extended_state[6] = 0;
+  XCov7 extended_covariance = XCov7::zeros();
+  for (int i = 0; i < 5; ++i)
+  {
+      for (int j = 0; j < 5; ++j)
+      {
+          extended_covariance(i, j) = m_current_cov(i, j);
+      }
+  }
+  for (int i = 5; i < 7; ++i)
+  {
+    for (int j = 5; j < 7; ++j)
+    {
+      extended_covariance(i, j) = m_meas_noise_cov(i, j);
+    }
+  }
+  // Obtain vector of sigma points and corresponding weights
+  cv::Mat cov_as_mat = (7 + m_kappa) * cv::Mat(extended_covariance);
+  cv::Mat decomposed_cov;
+  cholesky(cov_as_mat, decomposed_cov);
+  std::vector<double> sigma_weights;
+  std::vector<XVec7> sigma_points;
+  sigma_points.push_back(extended_state);
+  sigma_weights.push_back(m_kappa/(m_kappa + 7));
+  XVec7 current_col;
+  for (int i = 0; i < 7; ++i)
+  {
+      decomposed_cov.col(i).copyTo(current_col);
+      sigma_points.push_back(
+                  extended_state + current_col);
+      sigma_points.push_back(
+                  extended_state - current_col);
+      sigma_weights.push_back(0.5/(m_kappa + 7));
+      sigma_weights.push_back(0.5/(m_kappa + 7));
+  }
+  // Find weighted average of sigma points
+  XVec7 avg_sigma_points;
+  for (int i = 0; i < sigma_points.size(); ++i)
+  {
+    avg_sigma_points += sigma_weights[i] * sigma_points[i];
+  }
+  // Transform sigma points according to the process model
+  std::vector<MVec> transformed_points;
+  MVec new_point;
+  std::vector<XVec7>::iterator it;
+  std::vector<MVec>::iterator jt;
+  for (it = sigma_points.begin(); it != sigma_points.end(); ++it)
+  {
+    if (direction == -1)
+    {
+      new_point[0] = (*it)[0] - m_dist_left * sin((*it)[2]);
+      new_point[1] = (*it)[1] + m_dist_left * cos((*it)[2]);
+    }
+    else
+    {
+      new_point[0] = (*it)[0] + m_dist_right * sin((*it)[2]);
+      new_point[1] = (*it)[1] - m_dist_right * cos((*it)[2]);
+    }
+      transformed_points.push_back(new_point);
+  }
+  // Recover new mean and covariance;
+  MVec predicted_meas;
+  predicted_meas *= 0; // Make sure elements are initialized to 0
+  std::vector<double>::iterator wt;
+  for (jt = transformed_points.begin(), wt = sigma_weights.begin();
+       jt != transformed_points.end(); ++jt, ++wt)
+  {
+      predicted_meas += (*wt) * (*jt);
+  }
+  MCov weighted_cov = MCov::zeros();
+  for (jt = transformed_points.begin(), wt = sigma_weights.begin();
+       jt != transformed_points.end(); ++jt, ++wt)
+  {
+      weighted_cov += (*wt) *
+              (*jt - predicted_meas) * (*jt - predicted_meas).t();
+  }
+  CCov cross_cov = CCov::zeros();
+  for (int i = 0; i < sigma_points.size(); ++i)
+  {
+    cross_cov += sigma_weights[i] *
+        (sigma_points[i] - avg_sigma_points) *
+        (transformed_points[i] - predicted_meas).t();
+  }
+  CCov kalman_gain = cross_cov * weighted_cov.inv();
+  XVec7 corrected_state = extended_state +
+      kalman_gain * (measurement - predicted_meas);
+  XCov7 corrected_cov = extended_covariance -
+      kalman_gain * weighted_cov * kalman_gain.t();
+  for (int i = 0; i < 5; ++i)
+  {
+    m_current_state[i] = corrected_state[i];
+    for (int j = 0; j < 5; ++j)
+    {
+      m_current_cov(i, j) = corrected_cov(i, j);
+    }
+  }
+  m_pos.x = m_current_state[0];
+  m_pos.y = m_current_state[1];
+  m_angle = m_current_state[2];
 }
