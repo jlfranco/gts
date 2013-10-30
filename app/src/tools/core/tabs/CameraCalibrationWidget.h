@@ -98,6 +98,8 @@ private:
 
     SelectableImageGridMapper* m_imageGridMapperColor;
     ColorCalibrationImageTableMapper* m_imageTableMapperColor;
+    QString hueLeft;
+    QString hueRight;
 
 signals:
     void hueLeftSet(QString text);

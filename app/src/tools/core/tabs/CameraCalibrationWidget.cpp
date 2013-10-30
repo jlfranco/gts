@@ -96,8 +96,6 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
                                       CalibrationSchema::gridRowsKey,
                                       CalibrationSchema::gridColumnsKey ) );
 
-    AddMapper( CalibrationSchema::hueLeftKey, m_ui->m_hueLeft );
-    AddMapper( CalibrationSchema::hueRightKey, m_ui->m_hueRight );
     AddMapper( CalibrationSchema::luminanceMaxKey, m_ui->m_luminanceMax );
     AddMapper( CalibrationSchema::luminanceMinKey, m_ui->m_luminanceMin );
     AddMapper( CalibrationSchema::saturationMinKey, m_ui->m_saturationMin );
@@ -356,6 +354,16 @@ void CameraCalibrationWidget::ReloadCurrentConfigToolSpecific()
                 GetCurrentConfig().GetKeyValues( CalibrationSchema::colorCalibImageFileKey ) );
 
     m_ui->m_colorCalibrateBtn->setEnabled( colorCalibImages.size() >= 1 );
+
+    KeyValue hueLeftKeyTmp = GetCurrentConfig().GetKeyValue(CalibrationSchema::hueLeftKey);
+    QString hueLeftStyleTmp = QString("background-color:%1;").arg( hueLeftKeyTmp.ToQString() );
+    m_ui->m_hueLeft->setStyleSheet( hueLeftStyleTmp );
+    m_ui->m_hueLeft->setText( hueLeftKeyTmp.ToQString() );
+
+    KeyValue hueRightKeyTmp = GetCurrentConfig().GetKeyValue(CalibrationSchema::hueRightKey);
+    QString hueRightStyleTmp = QString("background-color:%1;").arg( hueRightKeyTmp.ToQString() );
+    m_ui->m_hueRight->setStyleSheet( hueRightStyleTmp );
+    m_ui->m_hueRight->setText( hueRightKeyTmp.ToQString() );
 }
 
 void CameraCalibrationWidget::AddImageIfValid( const QString& imageFileName,
@@ -443,19 +451,22 @@ void CameraCalibrationWidget::HueChanged( QRgb val )
     // build format string
     QString str = QString("background-color:%1;").arg(hex);
 
-
     // set color and save info
+    WbConfig config( GetCurrentConfig() );
     if ( selectionMode == LEFT )
     {
         m_ui->m_hueLeft->setStyleSheet(str);
-        //        emit hueLeftSet(hex);
-
+        m_ui->m_hueLeft->setText(hex);
+        config.SetKeyValue( CalibrationSchema::hueLeftKey,
+                            KeyValue::from(hex));
         cout << "Hue Left: ";
     }
     else
     {
         m_ui->m_hueRight->setStyleSheet(str);
-        //        emit hueRightSet(hex);
+        m_ui->m_hueRight->setText(hex);
+        config.SetKeyValue( CalibrationSchema::hueRightKey,
+                            KeyValue::from(hex));
         cout << "Hue Right: ";
     }
     selectionMode = NONE;
