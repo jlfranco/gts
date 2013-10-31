@@ -32,9 +32,11 @@ class RobotMetrics;
    Returns false if matrix is not positive definite*/
 
 bool cholesky (cv::Mat & mat, cv::Mat & output);
+void test(std::string inputFilename, std::string outputFilename);
 
 class ColorTracker : public RobotTracker
 {
+  friend void test(std::string, std::string);
 public:
     ColorTracker( const CameraCalibration * cam_calib,
                   const RobotMetrics * metrics,
@@ -89,15 +91,13 @@ public:
         m_pos = robotPosition;
     }
 
-    void SetCurrentImage( const IplImage *const pImg )
-    {
-        m_legacy_img = pImg;
-        m_currImg = cv::Mat(m_legacy_img);
-    }
+    void SetCurrentImage( const IplImage *const pImg );
 
     void Activate();
 
     bool Track( double timeStamp );
+
+    void initialize(MVec l_blob, MVec r_blob);
 
     void DoInactiveProcessing( double timeStamp );
 
@@ -105,7 +105,9 @@ public:
 
     void Rewind( double timeStamp );
 
-    // LoadTargetImage???
+    // LoadTargetImage is not required since the tracking method
+    // is target free
+    bool LoadTargetImage(const char * targetFilename) {return false;}
 
     const CameraCalibration * GetCalibration() const
     {
@@ -143,7 +145,7 @@ private:
     cv::Point2f m_pos;
     float m_angle;
 
-    float m_error; // Keep this?
+    float m_error;
 
     double m_current_timestamp;
 
@@ -157,6 +159,8 @@ private:
     double m_kappa; // Used in the unscented transform
 
     cv::Mat m_currImg;
+    cv::Mat m_hsvImg;
+
     const IplImage * m_legacy_img;
 
     TrackHistory::TrackLog m_history;

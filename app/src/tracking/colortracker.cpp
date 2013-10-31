@@ -9,6 +9,7 @@
 #include <opencv2/highgui/highgui.hpp>
 
 #include <cmath>
+#include <fstream>
 #include <string>
 #include <iostream>
 
@@ -118,6 +119,13 @@ CvPoint2D32f ColorTracker::GetBrushBarRight( CvPoint2D32f position, float headin
     return cvPoint2D32f( position.x + x, position.y + y );
 }
 
+void ColorTracker::SetCurrentImage(const IplImage *const pImg)
+{
+    m_legacy_img = pImg;
+    m_currImg = cv::Mat(m_legacy_img);
+    cv::cvtColor(m_currImg, m_hsvImg, CV_BGR2HSV);
+}
+
 void ColorTracker::Activate()
 {
     /* Placeholder function */
@@ -131,9 +139,9 @@ bool ColorTracker::Track(double timeStamp)
     {
       m_current_timestamp = timeStamp;
       MVec l_blob, r_blob;
-      bool found_l = find_blob(m_currImg, m_colorCal->getHueLeft(),
+      bool found_l = find_blob(m_hsvImg, m_colorCal->getHueLeft(),
           m_colorCal->getHueThr(), m_colorCal->getMinSat(), &l_blob);
-      bool found_r = find_blob(m_currImg, m_colorCal->getHueRight(),
+      bool found_r = find_blob(m_hsvImg, m_colorCal->getHueRight(),
           m_colorCal->getHueThr(), m_colorCal->getMinSat(), &r_blob);
       if (m_initialized)
       {
@@ -151,26 +159,7 @@ bool ColorTracker::Track(double timeStamp)
       {
         if ( found_l && found_r )
         {
-          MVec pos = 0.5 * ( (1 - m_dist_right + m_dist_left) * r_blob +
-                             (1 + m_dist_right - m_dist_left) * l_blob );
-          MVec dif = l_blob - r_blob;
-          m_pos.x = pos[0];
-          m_pos.y = pos[1];
-          m_angle = atan2(dif[1], dif[0]) + 0.5 * M_PI;
-          m_angle = m_angle>M_PI?m_angle-2*M_PI:m_angle;
-          m_current_state[0] = m_pos.x;
-          m_current_state[1] = m_pos.y;
-          m_current_state[2] = m_angle;
-          m_current_state[3] = 0;
-          m_current_state[4] = 0;
-          m_current_cov = SCov::zeros();
-          m_current_cov(0, 0) = 5;
-          m_current_cov(1, 1) = 5;
-          m_current_cov(2, 2) = M_PI/10;
-          m_current_cov(3, 3) = 5;
-          m_current_cov(4, 4) = M_PI/10;
-          // Set flag to initialized
-          m_initialized = true;
+          initialize(l_blob, r_blob);
         }
       }
       if (m_initialized)
@@ -189,6 +178,30 @@ bool ColorTracker::Track(double timeStamp)
     {
       return false;
     }
+}
+
+void ColorTracker::initialize (MVec l_blob, MVec r_blob)
+{
+    MVec pos = 0.5 * ( (1 - m_dist_right + m_dist_left) * r_blob +
+                       (1 + m_dist_right - m_dist_left) * l_blob );
+    MVec dif = l_blob - r_blob;
+    m_pos.x = pos[0];
+    m_pos.y = pos[1];
+    m_angle = atan2(dif[1], dif[0]) + 0.5 * M_PI;
+    m_angle = m_angle>M_PI?m_angle-2*M_PI:m_angle;
+    m_current_state[0] = m_pos.x;
+    m_current_state[1] = m_pos.y;
+    m_current_state[2] = m_angle;
+    m_current_state[3] = 0;
+    m_current_state[4] = 0;
+    m_current_cov = SCov::zeros();
+    m_current_cov(0, 0) = 5;
+    m_current_cov(1, 1) = 5;
+    m_current_cov(2, 2) = M_PI/10;
+    m_current_cov(3, 3) = 5;
+    m_current_cov(4, 4) = M_PI/10;
+    // Set flag to initialized
+    m_initialized = true;
 }
 
 void ColorTracker::DoInactiveProcessing(double timeStamp)
@@ -291,6 +304,7 @@ void ColorTracker::segment_blobs(const cv::Mat & input_image,
       CV_CHAIN_APPROX_SIMPLE);
 }
 
+// TODO Attention, input_image must be a HSV image!
 bool ColorTracker::find_blob(const cv::Mat & input_image, double hue_ref,
     double hue_thr, double sat_thr, MVec * blob)
 {
@@ -408,6 +422,7 @@ void ColorTracker::predict(double delta_t)
   m_pos.x = m_current_state[0];
   m_pos.y = m_current_state[1];
   m_angle = m_current_state[2];
+  m_error = cv::trace(m_current_cov);
 }
 
 void ColorTracker::update(MVec measurement, int direction)
@@ -521,4 +536,62 @@ void ColorTracker::update(MVec measurement, int direction)
   m_pos.x = m_current_state[0];
   m_pos.y = m_current_state[1];
   m_angle = m_current_state[2];
+}
+
+void test(std::string infn, std::string outfn)
+{
+  std::ifstream inputFile;
+  std::ofstream outputFile;
+  std::stringstream inLine;
+  std::string readLine;
+  std::stringstream outLine;
+  ColorTracker tracker(NULL, NULL, NULL, NULL);
+  inLine.precision(15);
+  outLine.precision(15);
+  inputFile.open(infn);
+  outputFile.open(outfn);
+  double dt, x_l, y_l, x_r, y_r;
+  MVec l_blob, r_blob;
+  if (!inputFile.is_open())
+  {
+    std::cout << "Couldn't open input file" << std::endl;
+    exit(1);
+  }
+  if (!outputFile.is_open())
+  {
+    std::cout << "Couldn't open output file" << std::endl;
+    exit(1);
+  }
+  bool initialized = false;
+  while (std::getline(inputFile, readLine))
+  {
+    inLine.str(readLine);
+    inLine >> dt >> x_l >> y_l >> x_r >> y_r;
+    l_blob[0] = x_l; l_blob[1] = y_l;
+    r_blob[0] = x_r; r_blob[1] = y_r;
+    tracker.predict(dt);
+    if (l_blob[0] != -1)
+    {
+      tracker.update(l_blob, -1);
+    }
+    if (r_blob[0] != -1)
+    {
+      tracker.update(r_blob, 1);
+    }
+    outLine.str("");
+    for (int i = 0; i < 5; ++i)
+    {
+      outLine << tracker.m_current_state[i] << " ";
+    }
+    for (int i = 0; i < 5; ++i)
+    {
+      for (int j = 0; j <= i; ++j)
+      {
+        outLine << tracker.m_current_cov(i, j) << " ";
+      }
+    }
+    outputFile << outLine.str() << std::endl;
+  }
+  inputFile.close();
+  outputFile.close();
 }
