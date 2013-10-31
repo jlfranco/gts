@@ -21,7 +21,9 @@
 #include "ui_CameraCalibrationWidget.h"
 
 #include "CalibrationImageGridMapper.h"
+#include "SelectableImageGridMapper.h"
 #include "CalibrationImageTableMapper.h"
+#include "ColorCalibrationImageTableMapper.h"
 #include "VideoSource.h"
 #include "CameraHardware.h"
 #include "Message.h"
@@ -60,7 +62,9 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
     m_captureLiveBtnController(),
     m_ui          ( new Ui::CameraCalibrationWidget ),
     m_imageGridMapper( 0 ),
-    m_imageTableMapper( 0 )
+    m_imageTableMapper( 0 ),
+    m_imageGridMapperColor( 0 ),
+    m_imageTableMapperColor( 0 )
 {
     m_ui->setupUi( this );
 
@@ -69,6 +73,10 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
                                       *m_ui->m_captureCancelBtn, *this, m_cameraHardware ) );
 
     QHeaderView* horizHeader = m_ui->m_imagesTableWidget->horizontalHeader();
+    horizHeader->setResizeMode( 0, QHeaderView::Stretch );
+    horizHeader->setResizeMode( 1, QHeaderView::ResizeToContents );
+
+    horizHeader = m_ui->m_imagesTableWidgetColor->horizontalHeader();
     horizHeader->setResizeMode( 0, QHeaderView::Stretch );
     horizHeader->setResizeMode( 1, QHeaderView::ResizeToContents );
 
@@ -88,24 +96,25 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
                                       CalibrationSchema::gridRowsKey,
                                       CalibrationSchema::gridColumnsKey ) );
 
-    AddMapper( CalibrationSchema::hueLeftKey, m_ui->m_hueLeft );
-    AddMapper( CalibrationSchema::hueRightKey, m_ui->m_hueRight );
+    AddMapper( CalibrationSchema::hueThresholdKey, m_ui->m_hueThreshold );
     AddMapper( CalibrationSchema::luminanceMaxKey, m_ui->m_luminanceMax );
     AddMapper( CalibrationSchema::luminanceMinKey, m_ui->m_luminanceMin );
     AddMapper( CalibrationSchema::saturationMinKey, m_ui->m_saturationMin );
-    AddMapper( CalibrationSchema::grayRedKey, m_ui->m_grayRed );
-    AddMapper( CalibrationSchema::grayGreenKey, m_ui->m_grayGreen );
-    AddMapper( CalibrationSchema::grayBlueKey, m_ui->m_grayBlue );
     AddMapper( CalibrationSchema::grayPercentageKey, m_ui->m_grayPercentage );
     AddMapper( CalibrationSchema::methodKey, m_ui->m_method );
+    AddMapper( CalibrationSchema::distLeftKey, m_ui->m_distLeft );
+    AddMapper( CalibrationSchema::distRightKey, m_ui->m_distRight );
 
     m_imageTableMapper = new CalibrationImageTableMapper( *m_ui->m_imagesTableWidget );
     AddMapper( m_imageTableMapper );
-
     m_imageGridMapper = new CalibrationImageGridMapper( *m_ui->m_imageGrid );
     AddMapper( m_imageGridMapper );
 
-    imageGridReturnId.clear();
+    m_imageTableMapperColor = new ColorCalibrationImageTableMapper( *m_ui->m_imagesTableWidgetColor );
+    AddMapper( m_imageTableMapperColor );
+    m_imageGridMapperColor = new SelectableImageGridMapper( *m_ui->m_imageGridColor );
+    AddMapper( m_imageGridMapperColor );
+    selectionMode = NONE;
 
     AddMapper( new CalibrateCameraResultsMapper( *m_ui->m_resultsTextBrowser ) );
 
@@ -114,11 +123,6 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
 
     m_ui->m_calibrationType->setCurrentIndex( 0 );
     m_ui->m_optionsTabs->setCurrentIndex( 0 );
-
-    QObject::connect( m_ui->m_calibrationType,
-                      SIGNAL ( currentChanged(int) ),
-                      this,
-                      SLOT ( CalibrationTypeChanged(int) ));
 
     QObject::connect( m_ui->m_fromFileBtn,
                       SIGNAL( clicked() ),
@@ -147,6 +151,13 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
                       SLOT( ImageTableItemChanged( QTableWidgetItem*,
                                                    QTableWidgetItem* ) ) );
 
+    QObject::connect( m_ui->m_imagesTableWidgetColor,
+                      SIGNAL( currentItemChanged ( QTableWidgetItem*,
+                                                   QTableWidgetItem* ) ),
+                      this,
+                      SLOT( ImageTableItemChangedColor( QTableWidgetItem*,
+                                                        QTableWidgetItem* ) ) );
+
 
     QObject::connect( m_ui->m_colorGetImageFromFileBtn,
                       SIGNAL( clicked() ),
@@ -160,10 +171,19 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
                       SIGNAL( clicked() ),
                       this,
                       SLOT( HueRightBtnClicked() ) );
+    QObject::connect( m_ui->m_hueGrayLabel,
+                      SIGNAL( clicked() ),
+                      this,
+                      SLOT( HueGrayBtnClicked() ) );
     QObject::connect( m_ui->m_colorCalibrateBtn,
                       SIGNAL( clicked() ),
                       this,
                       SLOT( ColorCalibrateBtnClicked() ) );
+
+    QObject::connect( m_ui->m_imageGridColor,
+                      SIGNAL( hueSet(QRgb) ),
+                      this,
+                      SLOT( HueChanged(QRgb) ) );
 
 }
 
@@ -175,22 +195,6 @@ CameraCalibrationWidget::~CameraCalibrationWidget()
 const QString CameraCalibrationWidget::GetSubSchemaDefaultFileName() const
 {
     return "calibration.xml";
-}
-
-void CameraCalibrationWidget::CalibrationTypeChanged(int index)
-{
-    if ( !index )
-    {
-        // this is the metric calibration tab
-        m_imageGridMapper->SetCurrentImage( imageGridReturnId.isNull()?"1":imageGridReturnId, false );
-    }
-    else
-    {
-        // this is the color calibration tab
-        imageGridReturnId = m_imageGridMapper->GetCurrentImageKey();
-        m_imageGridMapper->SetCurrentImage( "1", true );
-    }
-    ReloadCurrentConfig();
 }
 
 void CameraCalibrationWidget::ImageTableItemChanged(QTableWidgetItem* current,
@@ -209,6 +213,24 @@ void CameraCalibrationWidget::ImageTableItemChanged(QTableWidgetItem* current,
                                      .toString(),
                                      false);
         ReloadCurrentConfig( m_imageTableMapper ); //must exclude table here to ensure it still has a "current row" for delete
+    }
+}
+
+void CameraCalibrationWidget::ImageTableItemChangedColor(QTableWidgetItem* current,
+                                                         QTableWidgetItem* previous)
+{
+    Q_UNUSED(previous);
+
+    assert( m_imageGridMapperColor );
+    if ( m_imageGridMapperColor && current )
+    {
+        QTableWidgetItem* currentRowNameItem =
+            m_ui->m_imagesTableWidgetColor->item(current->row(),
+                                            ColorCalibrationImageTableMapper::nameColumn );
+        m_imageGridMapperColor->SetCurrentImage(
+            currentRowNameItem->data(ColorCalibrationImageTableMapper::idRoleOnName)
+                                     .toString());
+        ReloadCurrentConfig( m_imageTableMapperColor ); //must exclude table here to ensure it still has a "current row" for delete
     }
 }
 
@@ -331,6 +353,39 @@ void CameraCalibrationWidget::ReloadCurrentConfigToolSpecific()
                 GetCurrentConfig().GetKeyValues( CalibrationSchema::imageFileKey ) );
 
     m_ui->m_calibrateBtn->setEnabled( calibImages.size() >= 2 );
+
+    const WbKeyValues::ValueIdPairList colorCalibImages(
+                GetCurrentConfig().GetKeyValues( CalibrationSchema::colorCalibImageFileKey ) );
+
+    m_ui->m_colorCalibrateBtn->setEnabled( colorCalibImages.size() >= 1 );
+
+    /* TODO replace this with a mapper */
+    KeyValue hueLeftKeyTmp = GetCurrentConfig().GetKeyValue(CalibrationSchema::hueLeftKey);
+    if ( ! hueLeftKeyTmp.IsNull() )
+    {
+        QString hueLeftString  = QString("#%1").arg(hueLeftKeyTmp.ToQString());
+        QString hueLeftStyleTmp = QString("background-color:%1;").arg( hueLeftString );
+        m_ui->m_hueLeft->setStyleSheet( hueLeftStyleTmp );
+        m_ui->m_hueLeft->setText( hueLeftString );
+    }
+
+    KeyValue hueRightKeyTmp = GetCurrentConfig().GetKeyValue(CalibrationSchema::hueRightKey);
+    if ( ! hueRightKeyTmp.IsNull() )
+    {
+        QString hueRightString  = QString("#%1").arg(hueRightKeyTmp.ToQString());
+        QString hueRightStyleTmp = QString("background-color:%1;").arg( hueRightString );
+        m_ui->m_hueRight->setStyleSheet( hueRightStyleTmp );
+        m_ui->m_hueRight->setText( hueRightString );
+    }
+
+    KeyValue hueGrayKeyTmp = GetCurrentConfig().GetKeyValue(CalibrationSchema::hueGrayKey);
+    if ( ! hueGrayKeyTmp.IsNull() )
+    {
+        QString hueGrayStyleTmp = QString("background-color:#%1;").arg( hueGrayKeyTmp.ToQString() );
+        m_ui->m_hueGray->setStyleSheet( hueGrayStyleTmp );
+        QString hueGrayKeyTmpQString = hueGrayKeyTmp.ToQString();
+        m_ui->m_hueGray->setText  ( QString("#") + hueGrayKeyTmpQString );
+    }
 }
 
 void CameraCalibrationWidget::AddImageIfValid( const QString& imageFileName,
@@ -389,20 +444,78 @@ void CameraCalibrationWidget::CaptureCancelBtnClicked()
 
 void CameraCalibrationWidget::HueLeftBtnClicked()
 {
-    //TODO implement me
-    Message::Show( 0,
-                   tr( "Hue Left" ),
-                   tr( "NOT IMPLEMENTED!" ),
-                   Message::Severity_Critical );
+    if ( ! m_imageGridMapperColor->GetCurrentImageKey().isEmpty() )
+    {
+        m_imageGridMapperColor->selectionMode( 1 );
+        selectionMode = LEFT;
+    }
 }
 
 void CameraCalibrationWidget::HueRightBtnClicked()
 {
-    //TODO implement me
-    Message::Show( 0,
-                   tr( "Hue Left" ),
-                   tr( "NOT IMPLEMENTED!" ),
-                   Message::Severity_Critical );
+    if ( ! m_imageGridMapperColor->GetCurrentImageKey().isEmpty() )
+    {
+        m_imageGridMapperColor->selectionMode( 1 );
+        selectionMode = RIGHT;
+    }
+}
+
+void CameraCalibrationWidget::HueGrayBtnClicked()
+{
+    if ( ! m_imageGridMapperColor->GetCurrentImageKey().isEmpty() )
+    {
+        m_imageGridMapperColor->selectionMode( 1 );
+        selectionMode = GRAY;
+    }
+}
+
+using namespace std;
+void CameraCalibrationWidget::HueChanged( QRgb val )
+{
+    // remove the alpha crap
+    QString valNum = QString::number(val,16);
+    valNum.remove(0,2);
+
+    // build hex only
+    QString hex = QString("%1").arg(valNum);
+    QString hexSymbol = QString("#%1").arg(valNum);
+
+    // build format string
+    QString str = QString("background-color:%1;").arg(hexSymbol);
+
+    // set color and save info
+    WbConfig config( GetCurrentConfig() );
+    /* TODO replace this with a mapper */
+    switch ( selectionMode )
+    {
+    case LEFT:
+        m_ui->m_hueLeft->setStyleSheet(str);
+        m_ui->m_hueLeft->setText(hexSymbol);
+        config.SetKeyValue( CalibrationSchema::hueLeftKey,
+                            KeyValue::from(hex));
+        cout << "Hue Left: ";
+        break;
+    case RIGHT:
+        m_ui->m_hueRight->setStyleSheet(str);
+        m_ui->m_hueRight->setText(hexSymbol);
+        config.SetKeyValue( CalibrationSchema::hueRightKey,
+                            KeyValue::from(hex));
+        cout << "Hue Right: ";
+        break;
+    case GRAY:
+        m_ui->m_hueGray->setStyleSheet(str);
+        m_ui->m_hueGray->setText(hexSymbol);
+
+        config.SetKeyValue( CalibrationSchema::hueGrayKey,
+                            KeyValue::from(hex));
+        cout << "Hue Gray: ";
+        break;
+    case NONE:
+    default:
+        break;
+    }
+    selectionMode = NONE;
+    cout << hexSymbol.toStdString() << endl;
 }
 
 void CameraCalibrationWidget::ColorCalibrateBtnClicked()
@@ -540,38 +653,38 @@ const WbSchema CameraCalibrationWidget::CreateSchema()
                         WbSchemaElement::Multiplicity::One,
                         KeyNameList() << hueLeftKey
                                       << hueRightKey
+                                      << hueGrayKey
+                                      << hueThresholdKey
                                       << luminanceMaxKey
                                       << luminanceMinKey
                                       << saturationMinKey
-                                      << grayRedKey
-                                      << grayGreenKey
-                                      << grayBlueKey
                                       << grayPercentageKey
+                                      << distLeftKey
+                                      << distRightKey
                                       << methodKey,
                         DefaultValueMap().WithDefault( hueLeftKey,
-                                                       KeyValue::from( "1,1,1" ) )
+                                                       KeyValue::from( "FFFFFF" ) )
                                          .WithDefault( hueRightKey,
-                                                       KeyValue::from( "1,1,1" ) )
+                                                       KeyValue::from( "FFFFFF" ) )
+                                         .WithDefault( hueGrayKey,
+                                                       KeyValue::from( "FFFFFF" ) )
+                                         .WithDefault( hueThresholdKey,
+                                                       KeyValue::from( 0.3 ) )
                                          .WithDefault( luminanceMaxKey,
                                                        KeyValue::from( 1 ) )
                                          .WithDefault( luminanceMinKey,
                                                        KeyValue::from( 0 ) )
                                          .WithDefault( saturationMinKey,
                                                        KeyValue::from( 0.5 ) ) /*TODO define default*/
-                                         .WithDefault( grayRedKey,
-                                                       KeyValue::from( 0.5 ) )
-                                         .WithDefault( grayGreenKey,
-                                                       KeyValue::from( 0.5 ) )
-                                         .WithDefault( grayBlueKey,
-                                                       KeyValue::from( 0.5 ) )
                                          .WithDefault( grayPercentageKey,
                                                        KeyValue::from( 0.5 ) )
                                          .WithDefault( methodKey,
-                                                       KeyValue::from( 0 ) ));
+                                                       KeyValue::from( true ) ));
 
     schema.AddKeyGroup( colorCalibImageGroup,
                         WbSchemaElement::Multiplicity::One,
-                        KeyNameList() << colorCalibImageFileKey );
+                        KeyNameList() << colorCalibImageFileKey
+                                      << colorCalibImageErrorKey );
 
     return schema;
 }

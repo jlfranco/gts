@@ -37,7 +37,9 @@ class CameraHardware;
 class ImageView;
 class CaptureLiveBtnController;
 class CalibrationImageGridMapper;
+class SelectableImageGridMapper;
 class CalibrationImageTableMapper;
+class ColorCalibrationImageTableMapper;
 
 class CameraCalibrationWidget : public Tool
 {
@@ -52,8 +54,10 @@ public:
     virtual bool CanClose() const;
     virtual const QString CannotCloseReason() const;
 
+public slots:
+    void HueChanged( QRgb val );
+
 private slots:
-    void CalibrationTypeChanged(int index);
     void FromFileClicked();
     void CaptureLiveBtnClicked();
     void CaptureCancelBtnClicked();
@@ -61,11 +65,12 @@ private slots:
     void PrintGridBtnClicked();
     void ImageTableItemChanged(QTableWidgetItem* current, QTableWidgetItem* previous);
 
-    //TODO implement us!
     void ColorFromFileClicked();
     void ColorCalibrateBtnClicked();
     void HueLeftBtnClicked();
     void HueRightBtnClicked();
+    void HueGrayBtnClicked();
+    void ImageTableItemChangedColor(QTableWidgetItem* current, QTableWidgetItem* previous);
 
 private:
     const QString GetSubSchemaDefaultFileName() const;
@@ -89,9 +94,14 @@ private:
     Ui::CameraCalibrationWidget* m_ui;
     CalibrationImageGridMapper* m_imageGridMapper;
     CalibrationImageTableMapper* m_imageTableMapper;
+    enum selectionModes {NONE, LEFT, RIGHT, GRAY} selectionMode;
 
-    CalibrationImageGridMapper* m_colorImageGridMapper;
-    KeyId imageGridReturnId;
+    SelectableImageGridMapper* m_imageGridMapperColor;
+    ColorCalibrationImageTableMapper* m_imageTableMapperColor;
+    QString hueLeft;
+    QString hueRight;
+    QString hueGray;
+
 };
 
 #endif // CAMERACALIBRATIONWIDGET_H
