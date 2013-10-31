@@ -135,9 +135,12 @@ void ColorCalibration::CorrectColorBalance(cv::Mat * inputImage)
       for (it = inputImage -> begin<cv::Vec3b>();
            it != inputImage -> end<cv::Vec3b>(); ++it)
       {
-        (*it)[0] *= 255 * m_gray_l / m_gray_b;
-        (*it)[1] *= 255 * m_gray_l / m_gray_g;
-        (*it)[2] *= 255 * m_gray_l / m_gray_r;
+        int b = (0.5 + int( (*it)[0] ) * 255 * m_gray_l) / m_gray_b;
+        int g = (0.5 + int( (*it)[1] ) * 255 * m_gray_l) / m_gray_g;
+        int r = (0.5 + int( (*it)[2] ) * 255 * m_gray_l) / m_gray_r;
+        (*it)[0] = uchar( b );
+        (*it)[1] = uchar( g );
+        (*it)[2] = uchar( r );
       }
       break;
     }
