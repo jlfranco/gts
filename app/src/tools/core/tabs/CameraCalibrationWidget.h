@@ -65,11 +65,11 @@ private slots:
     void PrintGridBtnClicked();
     void ImageTableItemChanged(QTableWidgetItem* current, QTableWidgetItem* previous);
 
-    //TODO implement us!
     void ColorFromFileClicked();
     void ColorCalibrateBtnClicked();
     void HueLeftBtnClicked();
     void HueRightBtnClicked();
+    void HueGrayBtnClicked();
     void ImageTableItemChangedColor(QTableWidgetItem* current, QTableWidgetItem* previous);
 
 private:
@@ -94,12 +94,14 @@ private:
     Ui::CameraCalibrationWidget* m_ui;
     CalibrationImageGridMapper* m_imageGridMapper;
     CalibrationImageTableMapper* m_imageTableMapper;
-    enum selectionModes {NONE, LEFT, RIGHT} selectionMode;
+    enum selectionModes {NONE, LEFT, RIGHT, GRAY} selectionMode;
 
     SelectableImageGridMapper* m_imageGridMapperColor;
     ColorCalibrationImageTableMapper* m_imageTableMapperColor;
     QString hueLeft;
     QString hueRight;
+    QString hueGray;
+
 };
 
 #endif // CAMERACALIBRATIONWIDGET_H

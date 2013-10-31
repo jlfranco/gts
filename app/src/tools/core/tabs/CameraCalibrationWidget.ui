@@ -91,7 +91,7 @@
                  </size>
                 </property>
                 <property name="currentIndex">
-                 <number>0</number>
+                 <number>1</number>
                 </property>
                 <widget class="QWidget" name="m_standardOptionsPage">
                  <attribute name="title">
@@ -624,11 +624,14 @@ p, li { white-space: pre-wrap; }
                        </item>
                        <item>
                         <widget class="QLineEdit" name="m_hueLeft">
+                         <property name="enabled">
+                          <bool>false</bool>
+                         </property>
                          <property name="alignment">
                           <set>Qt::AlignCenter</set>
                          </property>
                          <property name="readOnly">
-                          <bool>false</bool>
+                          <bool>true</bool>
                          </property>
                         </widget>
                        </item>
@@ -659,6 +662,9 @@ p, li { white-space: pre-wrap; }
                        </item>
                        <item>
                         <widget class="QLineEdit" name="m_hueRight">
+                         <property name="enabled">
+                          <bool>false</bool>
+                         </property>
                          <property name="alignment">
                           <set>Qt::AlignCenter</set>
                          </property>
@@ -696,6 +702,48 @@ p, li { white-space: pre-wrap; }
                         <widget class="QLineEdit" name="m_hueThreshold">
                          <property name="maxLength">
                           <number>9</number>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="horizontalLayout_15" stretch="6,5">
+                       <item>
+                        <widget class="QPushButton" name="m_hueGrayLabel">
+                         <property name="text">
+                          <string>Hue Gray</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLineEdit" name="m_hueGray">
+                         <property name="enabled">
+                          <bool>false</bool>
+                         </property>
+                         <property name="alignment">
+                          <set>Qt::AlignCenter</set>
+                         </property>
+                         <property name="readOnly">
+                          <bool>true</bool>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="horizontalLayout_16" stretch="6,5">
+                       <item>
+                        <widget class="QLabel" name="label_5">
+                         <property name="text">
+                          <string>Gray Level (%)</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLineEdit" name="m_grayPercentage">
+                         <property name="placeholderText">
+                          <string/>
                          </property>
                         </widget>
                        </item>
@@ -740,49 +788,6 @@ p, li { white-space: pre-wrap; }
                        </item>
                        <item>
                         <widget class="QLineEdit" name="m_saturationMin"/>
-                       </item>
-                      </layout>
-                     </item>
-                     <item>
-                      <layout class="QHBoxLayout" name="horizontalLayout_15" stretch="2">
-                       <item>
-                        <widget class="QLabel" name="label_6">
-                         <property name="text">
-                          <string>Gray Levels (R,G,B,%)</string>
-                         </property>
-                        </widget>
-                       </item>
-                      </layout>
-                     </item>
-                     <item>
-                      <layout class="QHBoxLayout" name="horizontalLayout_16" stretch="0,0,0,0">
-                       <item>
-                        <widget class="QLineEdit" name="m_grayRed">
-                         <property name="placeholderText">
-                          <string>Red</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLineEdit" name="m_grayGreen">
-                         <property name="placeholderText">
-                          <string>Green</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLineEdit" name="m_grayBlue">
-                         <property name="placeholderText">
-                          <string>Blue</string>
-                         </property>
-                        </widget>
-                       </item>
-                       <item>
-                        <widget class="QLineEdit" name="m_grayPercentage">
-                         <property name="placeholderText">
-                          <string>%</string>
-                         </property>
-                        </widget>
                        </item>
                       </layout>
                      </item>
