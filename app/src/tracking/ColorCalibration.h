@@ -38,6 +38,7 @@ class ColorCalibration
     void   setGrayR     ( const float val )  { m_gray_r = val; }
     void   setGrayG     ( const float val )  { m_gray_g = val; }
     void   setGrayB     ( const float val )  { m_gray_b = val; }
+    void   setGrayL     ( const float val )  { m_gray_l = val; }
     void   setLeftDist  ( const double val ) { m_dist_l = val; }
     void   setRightDist ( const double val ) { m_dist_r = val; }
 
