@@ -29,6 +29,7 @@
 #include "Message.h"
 #include "CalibrationSchema.h"
 #include "CalibrationAlgorithm.h"
+#include "ColorCalibration.h"
 #include "CaptureLiveBtnController.h"
 #include "WbKeyValues.h"
 #include "ImagePrintPreviewDlg.h"
@@ -522,12 +523,12 @@ void CameraCalibrationWidget::ColorCalibrateBtnClicked()
 {
     /*TODO implement me! */
     CalibrationAlgorithm alg;
+
     UnknownLengthProgressDlg* const progressDialog = new UnknownLengthProgressDlg( this );
     progressDialog->Start( tr( "Performing color calibration" ), tr( "" ) );
 
-    //    const bool calibrationSuccessful = alg.Run( GetCurrentConfig() );
-    //    ReloadCurrentConfig();
-    const bool calibrationSuccessful = false;
+    ColorCalibration colorCalib;
+    const bool calibrationSuccessful = colorCalib.Run( GetCurrentConfig() );
 
     if ( calibrationSuccessful )
     {

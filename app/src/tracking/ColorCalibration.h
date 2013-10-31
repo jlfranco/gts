@@ -1,6 +1,7 @@
 #ifndef COLORCALIBRATION_H
 #define COLORCALIBRATION_H
 
+#include "WbConfig.h"
 
 #include <opencv2/core/core.hpp>
 
@@ -42,6 +43,8 @@ class ColorCalibration
     void   setLeftDist  ( const double val ) { m_dist_l = val; }
     void   setRightDist ( const double val ) { m_dist_r = val; }
 
+    bool   Run( const WbConfig& config);
+
     protected:
     /* Selected hues for left and right markers */
     float m_hueLeft;
@@ -62,6 +65,11 @@ class ColorCalibration
        These three points are assumed to lay in the same line  */
     double m_dist_l;
     double m_dist_r;
+
+    bool   HexStrRgbToHsv( const QString& hexRgbStr, float* h, float* s, float* v );
+    bool   HexStrToRgbScaled( const QString& hexRgbStr, float* r, float* g, float* b );
+
+    bool   Load( const WbConfig& config);
 };
 
 #endif // COLORCALIBRATION_H

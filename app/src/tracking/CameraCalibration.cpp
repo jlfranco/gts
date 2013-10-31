@@ -180,6 +180,7 @@ bool CameraCalibration::LoadColorCalibration( const WbConfig& cameraCalColor )
 {
     bool successful = false;
 
+    Q_UNUSED(cameraCalColor);
     // const WbKeyValues::ValueIdPairList calColorIds =
     //     cameraCalColor.GetKeyValues( CalibrationSchema::transformKey );
     // for (WbKeyValues::ValueIdPairList::const_iterator itt = calColorIds.begin(); itt != calColorIds.end(); ++itt)

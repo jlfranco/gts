@@ -1,4 +1,6 @@
 #include "ColorCalibration.h"
+#include "CalibrationSchema.h"
+#include <algorithm> // std::max
 
 ColorCalibration::ColorCalibration()
 {
@@ -6,6 +8,121 @@ ColorCalibration::ColorCalibration()
 
 ColorCalibration::~ColorCalibration()
 {
+}
+
+bool ColorCalibration::HexStrToRgbScaled ( const QString& hexRgbStr, float* r, float* g, float* b )
+{
+    if ( hexRgbStr.length() != 6 )
+    {
+        /* Expects "RRGGBB" string */
+        return false;
+    }
+    QString red   = hexRgbStr.mid(0,2); /* RR */
+    QString blue  = hexRgbStr.mid(2,2); /* GG */
+    QString green = hexRgbStr.mid(4,2); /* BB */
+
+    /* convert from hex str to int */
+    bool convOk;
+    int rInt, gInt, bInt;
+    rInt = red.toInt  ( &convOk, 16 ); if ( !convOk ) return false;
+    gInt = green.toInt( &convOk, 16 ); if ( !convOk ) return false;
+    bInt = blue.toInt ( &convOk, 16 ); if ( !convOk ) return false;
+
+    /* scale */
+    *r = ((float)rInt)/255.0;
+    *g = ((float)gInt)/255.0;
+    *b = ((float)bInt)/255.0;
+    return true;
+}
+
+bool ColorCalibration::HexStrRgbToHsv( const QString& hexRgbStr, float* h, float* s, float* v)
+{
+    float rF, gF, bF;
+    if ( ! HexStrToRgbScaled( hexRgbStr, &rF, &gF, &bF ) ) return false;
+
+    /*
+     * use opencv RGB to HSV
+     * http://docs.opencv.org/modules/imgproc/doc/miscellaneous_transformations.html?highlight=cvtcolor#cv.CvtColor
+     */
+    float hTmp, sTmp, vTmp;
+    vTmp = std::max(std::max(rF,gF),bF);
+    sTmp = ( vTmp==0 )?0:( vTmp - std::min( std::min( rF,gF ),bF ) )/vTmp;
+    if ( vTmp == rF )
+    {
+        hTmp = 60.0*(gF - bF)/( vTmp - std::min( std::min( rF,gF),bF ) );
+    }
+    else
+    {
+        if ( vTmp == gF )
+        {
+            hTmp = 120.0 + 60.0*(bF - rF)/( vTmp - std::min( std::min( rF,gF ),bF ) );
+        }
+        else
+        {
+            if ( vTmp == bF )
+            {
+                hTmp = 240.0 + 60.0*( rF - gF )/( vTmp - std::min( std::min( rF,gF ),bF ) );
+            }
+            else
+            {
+                /* this should not happen */
+                return false;
+            }
+        }
+    }
+
+    /* 8 bit images */
+    *h = hTmp;
+    *s = sTmp;
+    *v = vTmp;
+
+    if ( *h > 360 || *h < 0 ) return false;
+    if ( *s > 1   || * s < 0 ) return false;
+    if ( *v > 1   || * v < 0 ) return false;
+
+    return true;
+}
+
+bool ColorCalibration::Load( const WbConfig& config)
+{
+    QString colorStr;
+    float h, s,v;
+
+    /* Left */
+    colorStr = config.GetKeyValue( CalibrationSchema::hueLeftKey ).ToQString();
+    if ( !HexStrRgbToHsv( colorStr, &h, &s, &v ) ) return false;
+    setHueLeft(h);
+    setLeftDist ( config.GetKeyValue( CalibrationSchema::distLeftKey  ).ToDouble() );
+
+    /* Right */
+    colorStr = config.GetKeyValue( CalibrationSchema::hueRightKey ).ToQString();
+    if ( !HexStrRgbToHsv( colorStr, &h, &s, &v ) ) return false;
+    setHueRight(h);
+    setRightDist( config.GetKeyValue( CalibrationSchema::distRightKey ).ToDouble() );
+
+    /* Gray levels */
+    float gr, gg, gb;
+    colorStr = config.GetKeyValue( CalibrationSchema::hueGrayKey ).ToQString();
+    if ( !HexStrToRgbScaled( colorStr, &gr, &gg, &gb ) ) return false;
+    setGrayR(gr); setGrayG(gg); setGrayB(gb);
+    setGrayL( (float) config.GetKeyValue( CalibrationSchema::grayPercentageKey ).ToDouble() );
+
+    /* Luminance */
+    setMinLum( (float) config.GetKeyValue( CalibrationSchema::luminanceMinKey ).ToDouble() );
+    setMaxLum( (float) config.GetKeyValue( CalibrationSchema::luminanceMaxKey ).ToDouble() );
+
+    /* Thresholds */
+    setHueThr( (float) config.GetKeyValue( CalibrationSchema::hueThresholdKey ).ToDouble() );
+    setMinSat( (float) config.GetKeyValue( CalibrationSchema::saturationMinKey ).ToDouble() );
+
+    return true;
+}
+
+bool ColorCalibration::Run( const WbConfig& config)
+{
+    if ( !Load( config ) ) return false;
+
+    return false;
 }
 
 void ColorCalibration::CorrectColorBalance(cv::Mat * inputImage)
