@@ -1,4 +1,4 @@
-#include "colortracker.h"
+#include "ColorTracker.h"
 
 #include "ColorCalibration.h"
 #include "CameraCalibration.h"
