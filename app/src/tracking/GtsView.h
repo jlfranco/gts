@@ -39,6 +39,7 @@
 class CoverageSystem;
 class RobotMetrics;
 class CameraCalibration;
+class ColorCalibration;
 class VideoSequence;
 class ImageView;
 class ImageGrid;
@@ -127,6 +128,11 @@ public:
         return m_calNormal;
     }
 
+    const ColorCalibration* GetColorCalibration() const
+    {
+        return m_colCalib;
+    }
+
 private:
     int                   m_id;
 
@@ -134,6 +140,7 @@ private:
 
     CameraCalibration*    m_calScaled;
     CameraCalibration*    m_calNormal;
+    ColorCalibration*     m_colCalib;
     RobotTracker*         m_tracker;
 
     std::vector<timespec> m_timestamps;

@@ -38,7 +38,8 @@ class RobotTracker
 public:
     enum trackerType
     {
-        KLT_TRACKER = 0
+        KLT_TRACKER   = 0,
+        COLOR_TRACKER
     };
 
     enum paramType

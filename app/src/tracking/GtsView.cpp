@@ -22,6 +22,7 @@
 #include "RobotMetrics.h"
 #include "CameraCalibration.h"
 #include "KltTracker.h"
+#include "ColorTracker.h"
 #include "GroundTruthUI.h"
 #include "MathsConstants.h"
 
@@ -68,6 +69,7 @@ GtsView::GtsView() :
     m_fps         ( 0.0 ),
     m_calScaled   ( 0 ),
     m_calNormal   ( 0 ),
+    m_colCalib    ( 0 ),
     m_tracker     ( 0 ),
     m_sequencer   ( 0 ),
     m_imgFrame    ( 0 ),
@@ -195,6 +197,15 @@ bool GtsView::SetupCalibration( const KeyId     camPosId,
         return false;
     }
 
+    m_colCalib = new ColorCalibration();
+    if ( !m_colCalib->Load( cameraIntrisicConfig ) )
+    {
+        LOG_ERROR("Load color calibration failed!");
+
+        m_id = -1;
+        return false;
+    }
+
     CvSize m_boardsize = cvSize( camPosCalConfig.GetKeyValue(ExtrinsicCalibrationSchema::gridColumnsKey).ToInt(),
                                  camPosCalConfig.GetKeyValue(ExtrinsicCalibrationSchema::gridRowsKey).ToInt() );
 
@@ -251,6 +262,15 @@ bool GtsView::SetupTracker( RobotTracker::trackerType type,
                                         &metrics,
                                         m_imgWarp[m_imgIndex],
                                         biLevelThreshold );
+            success = m_tracker->LoadTargetImage( targetFile );
+            break;
+
+        case RobotTracker::COLOR_TRACKER:
+            LOG_TRACE("Creating target tracker - Color Tracker");
+            m_tracker = new ColorTracker( m_calScaled,
+                                          &metrics,
+                                          m_colCalib,
+                                          m_imgWarp[m_imgIndex]);
             success = m_tracker->LoadTargetImage( targetFile );
             break;
 

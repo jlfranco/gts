@@ -187,6 +187,11 @@ bool GtsScene::LoadCameraConfig( const KeyId               camPosId,
             gain = -1;
         }
         break;
+        case RobotTracker::COLOR_TRACKER :
+        {
+            /* just to avoid compiler warning */
+        }
+        break;
     }
 
     LOG_INFO(QObject::tr("Setting up video %1.").arg(m_ln));

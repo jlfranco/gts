@@ -84,6 +84,7 @@ private:
     void ConnectSignals();
 
     void FillOutCameraCombo( QComboBox& comboBox );
+    void FillOutTrackerCombo( QComboBox& comboBox, int index );
 
     void SetButtonIcon(QToolButton* button, QString iconImage);
 
@@ -149,6 +150,7 @@ private slots:
     void TrackLoadButtonClicked();
     void TrackSaveButtonClicked();
     void TrackResetButtonClicked();
+    void TrackerComboChanged( int );
 
 private:
     Ui::TrackRobotWidget* m_ui;

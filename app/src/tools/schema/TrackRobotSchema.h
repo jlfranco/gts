@@ -37,6 +37,7 @@ namespace TrackRobotSchema
         extern const KeyName biLevelThreshold;
         extern const KeyName nccThreshold;
         extern const KeyName resolution;
+        extern const KeyName tracker;
     }
 
     namespace PerCameraTrackingParams
@@ -47,6 +48,7 @@ namespace TrackRobotSchema
         extern const KeyName biLevelThreshold;
         extern const KeyName nccThreshold;
         extern const KeyName resolution;
+        extern const KeyName tracker;
     }
 }
 

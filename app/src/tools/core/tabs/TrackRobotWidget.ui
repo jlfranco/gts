@@ -350,7 +350,7 @@
             <number>0</number>
            </property>
            <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_2">
+            <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,5">
              <item>
               <widget class="QLabel" name="m_robotLabel">
                <property name="text">
@@ -370,6 +370,23 @@
                 </sizepolicy>
                </property>
               </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="1,5">
+             <item>
+              <widget class="QLabel" name="m_trackerLabel">
+               <property name="text">
+                <string>&amp;Tracker</string>
+               </property>
+               <property name="buddy">
+                <cstring>m_trackerCombo</cstring>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="m_trackerCombo"/>
              </item>
             </layout>
            </item>
@@ -622,7 +639,7 @@ p, li { white-space: pre-wrap; }
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_22">
               <item>
-               <layout class="QHBoxLayout" name="horizontalLayout_21">
+               <layout class="QHBoxLayout" name="horizontalLayout_21" stretch="1,4">
                 <item>
                  <widget class="QLabel" name="m_positionLabel">
                   <property name="text">
@@ -787,6 +804,20 @@ p, li { white-space: pre-wrap; }
                    <number>15</number>
                   </property>
                  </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_6">
+                <item>
+                 <widget class="QLabel" name="m_camTrackerLabel">
+                  <property name="text">
+                   <string>Tracker</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QComboBox" name="m_camTrackerCombo"/>
                 </item>
                </layout>
               </item>
