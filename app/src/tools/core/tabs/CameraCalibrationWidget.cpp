@@ -117,6 +117,11 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
     AddMapper( m_imageGridMapperColor );
     selectionMode = NONE;
 
+    m_ui->m_hueLeftLabel->setEnabled(false);
+    m_ui->m_hueRightLabel->setEnabled(false);
+    m_ui->m_hueGrayLabel->setEnabled(false);
+    m_ui->m_colorCalibrateBtn->setEnabled(false);
+
     AddMapper( new CalibrateCameraResultsMapper( *m_ui->m_resultsTextBrowser ) );
 
     QDoubleValidator* validator = new QDoubleValidator;
@@ -231,6 +236,12 @@ void CameraCalibrationWidget::ImageTableItemChangedColor(QTableWidgetItem* curre
         m_imageGridMapperColor->SetCurrentImage(
             currentRowNameItem->data(ColorCalibrationImageTableMapper::idRoleOnName)
                                      .toString());
+
+        m_ui->m_hueLeftLabel->setEnabled(true);
+        m_ui->m_hueRightLabel->setEnabled(true);
+        m_ui->m_hueGrayLabel->setEnabled(true);
+        m_ui->m_colorCalibrateBtn->setEnabled(true);
+
         ReloadCurrentConfig( m_imageTableMapperColor ); //must exclude table here to ensure it still has a "current row" for delete
     }
 }
@@ -357,8 +368,6 @@ void CameraCalibrationWidget::ReloadCurrentConfigToolSpecific()
 
     const WbKeyValues::ValueIdPairList colorCalibImages(
                 GetCurrentConfig().GetKeyValues( CalibrationSchema::colorCalibImageFileKey ) );
-
-    m_ui->m_colorCalibrateBtn->setEnabled( colorCalibImages.size() >= 1 );
 
     /* TODO replace this with a mapper */
     KeyValue hueLeftKeyTmp = GetCurrentConfig().GetKeyValue(CalibrationSchema::hueLeftKey);
@@ -545,7 +554,7 @@ void CameraCalibrationWidget::ColorCalibrateBtnClicked()
 
         Message::Show( 0,
                        tr( "Camera Color Calibration Tool" ),
-                       tr( "NOT IMPLEMENTED!" ),
+                       tr( "Color calibration failed!" ),
                        Message::Severity_Critical );
     }
 }
