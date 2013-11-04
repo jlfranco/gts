@@ -518,6 +518,11 @@ void CameraCalibrationWidget::HueChanged( QRgb val )
 
         config.SetKeyValue( CalibrationSchema::hueGrayKey,
                             KeyValue::from(hex));
+
+        config.SetKeyValue( CalibrationSchema::methodKey,
+                            KeyValue::from(false));
+        // update gray stuff
+        m_ui->m_method->setChecked(false);
         cout << "Hue Gray: ";
         break;
     case NONE:
