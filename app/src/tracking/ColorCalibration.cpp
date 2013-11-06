@@ -157,7 +157,7 @@ bool ColorCalibration::Test( const WbConfig& config, const QString& path, QImage
         return false;
     }
 
-    if ( !m_method )
+    if ( m_method )
     {
         AutoCalibrate( &imMat );
     }
