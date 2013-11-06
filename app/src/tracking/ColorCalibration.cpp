@@ -2,6 +2,10 @@
 #include "CalibrationSchema.h"
 #include <algorithm> // std::max
 
+#include "Logging.h"
+
+#include <opencv2/highgui/highgui.hpp>
+
 ColorCalibration::ColorCalibration()
 {
 }
@@ -38,12 +42,14 @@ bool ColorCalibration::HexStrToRgbScaled ( const QString& hexRgbStr, float* r, f
 bool ColorCalibration::HexStrRgbToHsv( const QString& hexRgbStr, float* h, float* s, float* v)
 {
     float rF, gF, bF;
+    LOG_TRACE(QObject::tr("CC: Converting HEX string [%1] to RGB").arg(hexRgbStr));
     if ( ! HexStrToRgbScaled( hexRgbStr, &rF, &gF, &bF ) ) return false;
 
     /*
      * use opencv RGB to HSV
      * http://docs.opencv.org/modules/imgproc/doc/miscellaneous_transformations.html?highlight=cvtcolor#cv.CvtColor
      */
+    LOG_TRACE("CC: Converting RGB string to HSV");
     float hTmp, sTmp, vTmp;
     vTmp = std::max(std::max(rF,gF),bF);
     sTmp = ( vTmp==0 )?0:( vTmp - std::min( std::min( rF,gF ),bF ) )/vTmp;
@@ -66,6 +72,7 @@ bool ColorCalibration::HexStrRgbToHsv( const QString& hexRgbStr, float* h, float
             else
             {
                 /* this should not happen */
+                LOG_ERROR("CC: HSV fail.");
                 return false;
             }
         }
@@ -76,9 +83,22 @@ bool ColorCalibration::HexStrRgbToHsv( const QString& hexRgbStr, float* h, float
     *s = sTmp;
     *v = vTmp;
 
-    if ( *h > 360 || *h < 0 ) return false;
-    if ( *s > 1   || * s < 0 ) return false;
-    if ( *v > 1   || * v < 0 ) return false;
+    LOG_TRACE(QObject::tr("CC: Validating RGB->HSV conversion results"));
+    if ( *h > 360 || *h < 0 )
+    {
+        LOG_ERROR(QObject::tr("CC: Invalid HSV H value:").arg(*h));;
+        return false;
+    }
+    if ( *s > 1   || * s < 0 )
+    {
+        LOG_ERROR(QObject::tr("CC: Invalid HSV S value.").arg(*s));
+        return false;
+    }
+    if ( *v > 1   || * v < 0 )
+    {
+        LOG_ERROR(QObject::tr("CC: Invalid HSV V value.").arg(*v));
+        return false;
+    }
 
     return true;
 }
