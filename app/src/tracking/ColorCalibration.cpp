@@ -167,7 +167,7 @@ bool ColorCalibration::Test( const WbConfig& config, const QString& path, QImage
     return true;
 }
 
-cv::Mat ColorCalibration::QtToCv( const QImage& im )
+cv::Mat ColorCalibration::QtToCv( const QImage& im ) const
 {
     // http://stackoverflow.com/questions/17127762/cvmat-to-qimage-and-back#answer-17137998
     cv::Mat tmp( im.height(), im.width(), CV_8UC3, (uchar*)im.bits(), im.bytesPerLine() );
@@ -176,7 +176,7 @@ cv::Mat ColorCalibration::QtToCv( const QImage& im )
     return imMat;
 }
 
-QImage ColorCalibration::CvToQt( const cv::Mat& mat )
+QImage ColorCalibration::CvToQt( const cv::Mat& mat ) const
 {
     cv::Mat matData;
     cv::cvtColor( mat, matData, CV_BGR2RGB );
@@ -186,7 +186,7 @@ QImage ColorCalibration::CvToQt( const cv::Mat& mat )
     return im;
 }
 
-bool ColorCalibration::CorrectColorBalance(QImage& im)
+bool ColorCalibration::CorrectColorBalance(QImage& im) const
 {
     cv::Mat imMat = QtToCv( im );
     if ( !CorrectColorBalance( &imMat ) ) return false;
@@ -194,7 +194,7 @@ bool ColorCalibration::CorrectColorBalance(QImage& im)
     return true;
 }
 
-bool ColorCalibration::CorrectColorBalance( IplImage* im )
+bool ColorCalibration::CorrectColorBalance( IplImage* im ) const
 {
     cv::Mat imMat( im );
     if ( !CorrectColorBalance( &imMat ) ) return false;
@@ -202,7 +202,7 @@ bool ColorCalibration::CorrectColorBalance( IplImage* im )
     return true;
 }
 
-bool ColorCalibration::CorrectColorBalance(cv::Mat * inputImage)
+bool ColorCalibration::CorrectColorBalance(cv::Mat * inputImage) const
 {
   switch (inputImage->depth())
   {

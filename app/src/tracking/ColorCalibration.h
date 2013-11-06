@@ -16,9 +16,9 @@ class ColorCalibration
 
     // Methods
     // Corrects color balance in place
-    bool CorrectColorBalance(QImage& im);
-    bool CorrectColorBalance(cv::Mat * inputImage);
-    bool CorrectColorBalance(IplImage* inputImage);
+    bool CorrectColorBalance(QImage& im) const;
+    bool CorrectColorBalance(cv::Mat * inputImage) const;
+    bool CorrectColorBalance(IplImage* inputImage) const;
     // Automatically determines gray levels using gray world assumption
     void AutoCalibrate(QImage& im);
     void AutoCalibrate(cv::Mat * sampleImage);
@@ -55,8 +55,8 @@ class ColorCalibration
 
     protected:
 
-    cv::Mat QtToCv( const QImage& im );
-    QImage  CvToQt( const cv::Mat& mat );
+    cv::Mat QtToCv( const QImage& im ) const;
+    QImage  CvToQt( const cv::Mat& mat ) const;
 
     /* Selected hues for left and right markers */
     float m_hueLeft;
