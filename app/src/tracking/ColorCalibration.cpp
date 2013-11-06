@@ -158,9 +158,9 @@ void ColorCalibration::CorrectColorBalance(cv::Mat * inputImage)
       for (it = inputImage -> begin<cv::Vec3b>();
            it != inputImage -> end<cv::Vec3b>(); ++it)
       {
-        int b = (0.5 + int( (*it)[0] ) * 255 * m_gray_l) / m_gray_b;
-        int g = (0.5 + int( (*it)[1] ) * 255 * m_gray_l) / m_gray_g;
-        int r = (0.5 + int( (*it)[2] ) * 255 * m_gray_l) / m_gray_r;
+        int b = (0.5 + int( (*it)[0] ) * m_gray_l) / m_gray_b;
+        int g = (0.5 + int( (*it)[1] ) * m_gray_l) / m_gray_g;
+        int r = (0.5 + int( (*it)[2] ) * m_gray_l) / m_gray_r;
         (*it)[0] = uchar( b );
         (*it)[1] = uchar( g );
         (*it)[2] = uchar( r );
@@ -212,6 +212,9 @@ void ColorCalibration::AutoCalibrate(cv::Mat *sampleImage)
         avg_g += factor * (*it)[1];
         avg_r += factor * (*it)[2];
       }
+      avg_b /= 255;
+      avg_g /= 255;
+      avg_r /= 255;
       break;
     }
     case CV_32F:
