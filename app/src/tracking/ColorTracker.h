@@ -112,7 +112,7 @@ public:
 
     // LoadTargetImage is not required since the tracking method
     // is target free
-    bool LoadTargetImage(const char * targetFilename) {return false;}
+    bool LoadTargetImage(const char * targetFilename) {return true;}
 
     const CameraCalibration * GetCalibration() const
     {
