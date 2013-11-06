@@ -91,6 +91,11 @@ public:
         m_pos = robotPosition;
     }
 
+    bool UsesColorImages()
+    {
+        return true;
+    }
+
     void SetCurrentImage( const IplImage *const pImg );
 
     void Activate();

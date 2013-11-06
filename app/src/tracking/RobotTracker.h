@@ -63,6 +63,8 @@ public:
     virtual CvPoint2D32f GetBrushBarLeft( CvPoint2D32f position, float heading ) const = 0;
     virtual CvPoint2D32f GetBrushBarRight( CvPoint2D32f position, float heading ) const = 0;
 
+    virtual bool UsesColorImages() = 0;
+
     virtual void SetPosition( CvPoint2D32f robotPosition ) = 0;
 
     virtual void SetCurrentImage(const IplImage* const pImg) = 0;
