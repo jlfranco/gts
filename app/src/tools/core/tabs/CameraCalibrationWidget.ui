@@ -575,7 +575,7 @@ p, li { white-space: pre-wrap; }
              <attribute name="title">
               <string>Color Calibration</string>
              </attribute>
-             <layout class="QGridLayout" name="gridLayout_4" columnstretch="2,1,0">
+             <layout class="QGridLayout" name="gridLayout_4" columnstretch="2,1">
               <property name="topMargin">
                <number>0</number>
               </property>
@@ -852,7 +852,7 @@ p, li { white-space: pre-wrap; }
                      <item>
                       <widget class="QPushButton" name="m_colorCalibrateBtn">
                        <property name="text">
-                        <string>&amp;Color Calibrate</string>
+                        <string>&amp;Test</string>
                        </property>
                       </widget>
                      </item>

@@ -141,14 +141,68 @@ bool ColorCalibration::Load( const WbConfig& config)
     return true;
 }
 
-bool ColorCalibration::Run( const WbConfig& config)
+bool ColorCalibration::Test( const WbConfig& config, const QString& path, QImage* output )
 {
-    if ( !Load( config ) ) return false;
+    if ( !Load( config ) )
+    {
+        LOG_ERROR(QObject::tr("Failed to load color calibration config!"));
+        return false;
+    }
 
-    return false;
+    using namespace cv;
+    cv::Mat imMat = imread( path.toStdString() , CV_LOAD_IMAGE_COLOR );
+    if ( !imMat.data )
+    {
+        LOG_ERROR( QObject::tr( "Failed to open image: %1" ).arg( path.toStdString().c_str() ) );
+        return false;
+    }
+
+    if ( !m_method )
+    {
+        AutoCalibrate( &imMat );
+    }
+    CorrectColorBalance( &imMat );
+
+    *output = CvToQt( imMat );
+    return true;
 }
 
-void ColorCalibration::CorrectColorBalance(cv::Mat * inputImage)
+cv::Mat ColorCalibration::QtToCv( const QImage& im )
+{
+    // http://stackoverflow.com/questions/17127762/cvmat-to-qimage-and-back#answer-17137998
+    cv::Mat tmp( im.height(), im.width(), CV_8UC3, (uchar*)im.bits(), im.bytesPerLine() );
+    cv::Mat imMat;
+    cvtColor( tmp, imMat, CV_BGR2RGB );
+    return imMat;
+}
+
+QImage ColorCalibration::CvToQt( const cv::Mat& mat )
+{
+    cv::Mat matData;
+    cv::cvtColor( mat, matData, CV_BGR2RGB );
+    assert( matData.isContinuous() );
+    QImage im = QImage( matData.data, matData.cols, matData.rows,
+                        3*matData.cols, QImage::Format_RGB888);
+    return im;
+}
+
+bool ColorCalibration::CorrectColorBalance(QImage& im)
+{
+    cv::Mat imMat = QtToCv( im );
+    if ( !CorrectColorBalance( &imMat ) ) return false;
+    im = CvToQt( imMat );
+    return true;
+}
+
+bool ColorCalibration::CorrectColorBalance( IplImage* im )
+{
+    cv::Mat imMat( im );
+    if ( !CorrectColorBalance( &imMat ) ) return false;
+    cvCopy(im, &imMat);
+    return true;
+}
+
+bool ColorCalibration::CorrectColorBalance(cv::Mat * inputImage)
 {
   switch (inputImage->depth())
   {
@@ -192,6 +246,14 @@ void ColorCalibration::CorrectColorBalance(cv::Mat * inputImage)
       break;
     }
   }
+  return true;
+}
+
+void ColorCalibration::AutoCalibrate(QImage& im)
+{
+    cv::Mat imMat = QtToCv( im );
+    AutoCalibrate( &imMat );
+    im = CvToQt( imMat );
 }
 
 void ColorCalibration::AutoCalibrate(cv::Mat *sampleImage)

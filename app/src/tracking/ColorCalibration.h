@@ -13,11 +13,16 @@ class ColorCalibration
     ~ColorCalibration();
     /* TODO: Implement functions to load/save from/to WbConfig files
        (c.f. CameraCalibration, RobotMetrics) */
+
     // Methods
     // Corrects color balance in place
-    void CorrectColorBalance(cv::Mat * inputImage); /*TODO*/
+    bool CorrectColorBalance(QImage& im);
+    bool CorrectColorBalance(cv::Mat * inputImage);
+    bool CorrectColorBalance(IplImage* inputImage);
     // Automatically determines gray levels using gray world assumption
-    void AutoCalibrate(cv::Mat * sampleImage); /*TODO*/
+    void AutoCalibrate(QImage& im);
+    void AutoCalibrate(cv::Mat * sampleImage);
+
     // Accessors
     float  getHueLeft()   const { return m_hueLeft; }
     float  getHueRight()  const { return m_hueRight; }
@@ -45,9 +50,14 @@ class ColorCalibration
     void   setRightDist ( const double val ) { m_dist_r = val; }
     void   setMethod    ( const bool val  )  { m_method = val; }
 
-    bool   Run( const WbConfig& config);
+    bool   Load( const WbConfig& config);
+    bool   Test( const WbConfig& config, const QString& path, QImage* output );
 
     protected:
+
+    cv::Mat QtToCv( const QImage& im );
+    QImage  CvToQt( const cv::Mat& mat );
+
     /* Selected hues for left and right markers */
     float m_hueLeft;
     float m_hueRight;
@@ -75,8 +85,6 @@ class ColorCalibration
 
     bool   HexStrRgbToHsv( const QString& hexRgbStr, float* h, float* s, float* v );
     bool   HexStrToRgbScaled( const QString& hexRgbStr, float* r, float* g, float* b );
-
-    bool   Load( const WbConfig& config);
 };
 
 #endif // COLORCALIBRATION_H
