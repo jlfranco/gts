@@ -30,6 +30,7 @@ class ColorCalibration
     float  getGrayB()     const { return m_gray_b; }
     double getLeftDist()  const { return m_dist_l; }
     double getRightDist() const { return m_dist_r; }
+    double getMethod()    const { return m_method; }
     void   setHueLeft   ( const float val )  { m_hueLeft = val; }
     void   setHueRight  ( const float val )  { m_hueRight = val; }
     void   setHueThr    ( const float val )  { m_hueThr = val; }
@@ -42,6 +43,7 @@ class ColorCalibration
     void   setGrayL     ( const float val )  { m_gray_l = val; }
     void   setLeftDist  ( const double val ) { m_dist_l = val; }
     void   setRightDist ( const double val ) { m_dist_r = val; }
+    void   setMethod    ( const bool val  )  { m_method = val; }
 
     bool   Run( const WbConfig& config);
 
@@ -65,6 +67,11 @@ class ColorCalibration
        These three points are assumed to lay in the same line  */
     double m_dist_l;
     double m_dist_r;
+    /* If true them use user provided gray levels, otherwise will determine
+       gray levels automatically. */
+    bool m_method;
+
+    QImage im;
 
     bool   HexStrRgbToHsv( const QString& hexRgbStr, float* h, float* s, float* v );
     bool   HexStrToRgbScaled( const QString& hexRgbStr, float* r, float* g, float* b );

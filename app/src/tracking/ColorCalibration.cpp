@@ -135,6 +135,9 @@ bool ColorCalibration::Load( const WbConfig& config)
     setHueThr( (float) config.GetKeyValue( CalibrationSchema::hueThresholdKey ).ToDouble() );
     setMinSat( (float) config.GetKeyValue( CalibrationSchema::saturationMinKey ).ToDouble() );
 
+    /* method */
+    setMethod( config.GetKeyValue( CalibrationSchema::methodKey ).ToBool() );
+
     return true;
 }
 
