@@ -18,8 +18,8 @@ bool ColorCalibration::HexStrToRgbScaled ( const QString& hexRgbStr, float* r, f
         return false;
     }
     QString red   = hexRgbStr.mid(0,2); /* RR */
-    QString blue  = hexRgbStr.mid(2,2); /* GG */
-    QString green = hexRgbStr.mid(4,2); /* BB */
+    QString green = hexRgbStr.mid(2,2); /* GG */
+    QString blue  = hexRgbStr.mid(4,2); /* BB */
 
     /* convert from hex str to int */
     bool convOk;
