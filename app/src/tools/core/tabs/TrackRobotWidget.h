@@ -116,8 +116,7 @@ private:
     const bool CreateVideoDirectory( const QString& videoDirectoryName );
 
     const ExitStatus::Flags TrackLoad( const WbConfig&           trackConfig,
-                                       ImageGrid*                imageGrid,
-                                       RobotTracker::trackerType tracker );
+                                       ImageGrid*                imageGrid );
 
     const ExitStatus::Flags TrackRun( double rate,
                                       bool trackingActive,

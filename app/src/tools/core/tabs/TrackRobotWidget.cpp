@@ -894,8 +894,7 @@ void TrackRobotWidget::TrackLoadButtonClicked()
         progressDialog->Start( tr( "Loading" ), tr( "" ) );
 
         ExitStatus::Flags exitCode = TrackLoad( config,
-                                                m_ui->m_imageGrid,
-                                                (RobotTracker::trackerType) config.GetKeyValue( RunSchema::trackerKey  ).ToInt() );
+                                                m_ui->m_imageGrid );
 
         successful = ( exitCode == ExitStatus::OK_TO_CONTINUE );
 
@@ -1153,8 +1152,7 @@ void TrackRobotWidget::SetPosition( double position )
 // ----------------------------------------------------------------------------------------------------------------------------
 
 const ExitStatus::Flags TrackRobotWidget::TrackLoad( const WbConfig&               trackConfig,
-											             ImageGrid*                imageGrid,
-											             RobotTracker::trackerType tracker )
+                                                     ImageGrid*                imageGrid )
 {
     ExitStatus::Flags exitStatus = ExitStatus::OK_TO_CONTINUE;
 
@@ -1238,8 +1236,7 @@ const ExitStatus::Flags TrackRobotWidget::TrackLoad( const WbConfig&            
                                                camPosConfig,
                                                roomConfig,
                                                robotConfig,
-                                               trackConfig,
-                                               tracker );
+                                               trackConfig );
     }
 
     if (successful)
