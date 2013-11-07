@@ -98,8 +98,6 @@ public:
 
     void SetCurrentImage( const IplImage *const pImg );
 
-    void Activate();
-
     bool Track( double timeStamp );
 
     void initialize(MVec l_blob, MVec r_blob);
