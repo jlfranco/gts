@@ -76,10 +76,13 @@ GtsView::GtsView() :
     m_imgGrey     ( 0 ),
     m_thumbnail   ( 0 ),
     m_metrics     ( 0 ),
-    m_imgIndex    ( 0 )
+    m_imgIndex    ( 0 ),
+    m_imgColIndex ( 0 )
 {
     m_imgWarp[0] = 0;
     m_imgWarp[1] = 0;
+    m_imgWarpColor[0] = 0;
+    m_imgWarpColor[1] = 0;
 }
 
 /**
@@ -95,6 +98,8 @@ void GtsView::Reset()
     cvReleaseImage( &m_imgWarp[1] );
     cvReleaseImage( &m_imgFrame );
     cvReleaseImage( &m_thumbnail );
+    if ( m_imgWarpColor[0] ) cvReleaseImage( &m_imgWarpColor[0] );
+    if ( m_imgWarpColor[1] ) cvReleaseImage( &m_imgWarpColor[1] );
 
     delete m_tracker;
     delete m_calScaled;
@@ -271,7 +276,7 @@ bool GtsView::SetupTracker( RobotTracker::trackerType type,
                                           &metrics,
                                           m_colCalib,
                                           m_imgWarp[m_imgIndex]);
-            success = m_tracker->LoadTargetImage( targetFile );
+            success = true; // no target used
             break;
 
         default:
@@ -509,14 +514,6 @@ void GtsView::StepTracker( bool forward, CoverageSystem* coverage )
 
     if ( m_sequencer->TakeFrame() )
     {
-        assert( "video size & calibration size do not match" &&
-                m_imgFrame->width == m_imgGrey->width &&
-                m_imgFrame->height == m_imgGrey->height );
-
-        // Convert to grey-scale and flip at same time
-        cvConvertImage( m_imgFrame, m_imgGrey, m_sequencer->Flip() );
-        m_calScaled->UnwarpGroundPlane( m_imgGrey, m_imgWarp[m_imgIndex] );
-
         double videoTimeStampInMillisecs = -1.0;
         if ( m_timestamps.size() > 0 )
         {
@@ -531,7 +528,51 @@ void GtsView::StepTracker( bool forward, CoverageSystem* coverage )
             videoTimeStampInMillisecs = m_sequencer->GetTimeStamp();
         }
 
-        m_tracker->SetCurrentImage( m_imgWarp[m_imgIndex] );
+        assert( "video size & calibration size do not match" &&
+                m_imgFrame->width == m_imgGrey->width &&
+                m_imgFrame->height == m_imgGrey->height );
+
+        // Convert to grey-scale and flip at same time
+        cvConvertImage( m_imgFrame, m_imgGrey, m_sequencer->Flip() );
+        m_calScaled->UnwarpGroundPlane( m_imgGrey, m_imgWarp[m_imgIndex] );
+
+        if ( m_tracker->UsesColorImages() )
+        {
+            // non grayscale for trackers that need colors
+            // split - apply unwarp to each channel
+            CvSize s      = cvSize( m_imgFrame->width, m_imgFrame->height );
+            CvSize sCalib = cvSize( m_imgWarp[0]->width,
+                                    m_imgWarp[0]->height );
+            int         d = m_imgFrame->depth;
+            IplImage* r    = cvCreateImage( s, d, 1 );
+            IplImage* rFix = cvCreateImage( sCalib, d, 1 );
+            IplImage* g    = cvCreateImage( s, d, 1 );
+            IplImage* gFix = cvCreateImage( sCalib, d, 1 );
+            IplImage* b    = cvCreateImage( s, d, 1 );
+            IplImage* bFix = cvCreateImage( sCalib, d, 1 );
+            cvSplit( m_imgFrame, b, g, r, 0 );
+            // fix
+            m_calScaled->UnwarpGroundPlane( b, bFix );
+            m_calScaled->UnwarpGroundPlane( g, gFix );
+            m_calScaled->UnwarpGroundPlane( r, rFix );
+            // merge
+            m_imgWarpColor[m_imgColIndex] = cvCreateImage( sCalib, d, 3 );
+            cvMerge( bFix, gFix, rFix, 0, m_imgWarpColor[m_imgColIndex] );
+            cvReleaseImage( &b );
+            cvReleaseImage( &bFix );
+            cvReleaseImage( &g );
+            cvReleaseImage( &gFix );
+            cvReleaseImage( &r );
+            cvReleaseImage( &rFix );
+
+            m_tracker->SetCurrentImage( m_imgWarpColor[m_imgColIndex] );
+
+            m_imgColIndex = (m_imgColIndex + 1)%2;
+            if ( m_imgWarpColor[m_imgColIndex] )
+            {
+                cvReleaseImage( &m_imgWarpColor[m_imgColIndex] );
+            }
+        }
 
         // Perform motion detection so
         // that recovery is possible.

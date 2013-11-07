@@ -157,6 +157,9 @@ private:
     IplImage*             m_imgWarp[2];
     IplImage*             m_imgWarp_[2];
 
+    unsigned int          m_imgColIndex;
+    IplImage*             m_imgWarpColor[2];
+
     std::string           m_name;
 
 	std::string           m_trackView;

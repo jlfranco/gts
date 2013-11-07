@@ -4,6 +4,8 @@
 #include "CameraCalibration.h"
 #include "RobotMetrics.h"
 
+#include "Logging.h"
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -125,6 +127,7 @@ CvPoint2D32f ColorTracker::GetBrushBarRight( CvPoint2D32f position, float headin
 
 void ColorTracker::SetCurrentImage(const IplImage *const pImg)
 {
+    //TODO prev not required??
     m_legacy_img = pImg;
     m_currImg = cv::Mat(m_legacy_img);
     cv::cvtColor(m_currImg, m_hsvImg, CV_BGR2HSV);
@@ -176,11 +179,12 @@ bool ColorTracker::Track(double timeStamp)
           GetPosition(), GetHeading(), GetError(), timeStamp, sref ) );
         return true;
       }
+      else
+      {
+        return false;
+      }
     }
-    else
-    {
-      return false;
-    }
+    return true;
 }
 
 void ColorTracker::initialize (MVec l_blob, MVec r_blob)
