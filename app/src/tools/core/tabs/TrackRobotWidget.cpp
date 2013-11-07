@@ -224,7 +224,6 @@ void TrackRobotWidget::ConnectSignals()
                       SIGNAL( clicked() ),
                       this,
                       SLOT( SaveBtnClicked() ) );
-
     QObject::connect( m_ui->m_trackerCombo,
                       SIGNAL( currentIndexChanged (int) ),
                       this,
