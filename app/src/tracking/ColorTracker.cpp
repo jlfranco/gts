@@ -69,6 +69,10 @@ ColorTracker::ColorTracker(const CameraCalibration * cam_calib,
    - timestamp initialization (is it 0 or is it somehow offset?)
 */
 {
+    // convert from cm to px
+    m_dist_left  = col_calib->getLeftDist() *metrics->GetScaleFactor();
+    m_dist_right = col_calib->getRightDist()*metrics->GetScaleFactor();
+
 }
 
 ColorTracker::~ColorTracker()

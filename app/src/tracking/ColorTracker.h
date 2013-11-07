@@ -154,8 +154,8 @@ private:
 
     double m_current_timestamp;
 
-    double m_dist_left;
-    double m_dist_right;
+    double m_dist_left;  // [px]
+    double m_dist_right; // [px]
 
     SVec m_current_state;
     SCov m_current_cov;
