@@ -129,7 +129,9 @@ void ColorTracker::SetCurrentImage(const IplImage *const pImg)
 {
     //TODO prev not required??
     m_legacy_img = pImg;
-    m_currImg = cv::Mat(m_legacy_img);//primero colores dsp bgr2hsv
+    m_currImg = cv::Mat(m_legacy_img);
+    m_currImg.convertTo(m_currImg, CV_32F);
+
     bool ok = m_colorCal->CorrectColorBalance( &m_currImg );
     if ( !ok  )
     {
@@ -275,7 +277,10 @@ void ColorTracker::segment_blobs(const cv::Mat & input_image,
     std::vector<std::vector<cv::Point2i> > * contours, double hue_ref,
     double hue_thr, double sat_thr)
 {
+  CV_Assert(input_image.type() == CV_32FC3);
+
   contours->clear();
+
   cv::Mat segmented_image = cv::Mat::zeros(
       input_image.rows, input_image.cols, CV_8UC1);
   double distance;
