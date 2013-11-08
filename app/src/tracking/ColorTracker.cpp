@@ -218,6 +218,7 @@ void ColorTracker::DoInactiveProcessing(double timeStamp)
     // call to predict(delta_t) after computing the elated
     // time since the last change to the timestamp
     /* Placeholder function */
+    Q_UNUSED(timeStamp);
 }
 
 void ColorTracker::Rewind(double timeStamp)
