@@ -129,13 +129,13 @@ void ColorTracker::SetCurrentImage(const IplImage *const pImg)
 {
     //TODO prev not required??
     m_legacy_img = pImg;
-    m_currImg = cv::Mat(m_legacy_img);
-    cv::cvtColor(m_currImg, m_hsvImg, CV_BGR2HSV);
-    bool ok = m_colorCal->CorrectColorBalance( &m_hsvImg );
+    m_currImg = cv::Mat(m_legacy_img);//primero colores dsp bgr2hsv
+    bool ok = m_colorCal->CorrectColorBalance( &m_currImg );
     if ( !ok  )
     {
         LOG_ERROR("CC - Failed to set new image!");
     }
+    cv::cvtColor(m_currImg, m_hsvImg, CV_BGR2HSV);
 }
 
 bool ColorTracker::Track(double timeStamp)
