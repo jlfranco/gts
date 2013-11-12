@@ -575,7 +575,6 @@ void test(std::string infn, std::string outfn)
     std::cout << "Couldn't open output file" << std::endl;
     exit(1);
   }
-  bool initialized = false;
   while (std::getline(inputFile, readLine))
   {
     inLine.str(readLine);
