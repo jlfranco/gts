@@ -252,6 +252,8 @@ void ColorTracker::Rewind(double timeStamp)
 void ColorTracker::SetParam(paramType param, float value)
 {
     /* Placeholder function */
+    Q_UNUSED(param);
+    Q_UNUSED(value);
 }
 
 int ColorTracker::largest_polygon(std::vector<std::vector<cv::Point2i> > & polygons)
@@ -487,7 +489,7 @@ void ColorTracker::update(MVec measurement, int direction)
   }
   // Find weighted average of sigma points
   XVec7 avg_sigma_points;
-  for (int i = 0; i < sigma_points.size(); ++i)
+  for (unsigned int i = 0; i < sigma_points.size(); ++i)
   {
     avg_sigma_points += sigma_weights[i] * sigma_points[i];
   }
@@ -527,7 +529,7 @@ void ColorTracker::update(MVec measurement, int direction)
               (*jt - predicted_meas) * (*jt - predicted_meas).t();
   }
   CCov cross_cov = CCov::zeros();
-  for (int i = 0; i < sigma_points.size(); ++i)
+  for (unsigned int i = 0; i < sigma_points.size(); ++i)
   {
     cross_cov += sigma_weights[i] *
         (sigma_points[i] - avg_sigma_points) *
