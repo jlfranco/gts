@@ -130,7 +130,7 @@ void ColorTracker::SetCurrentImage(const IplImage *const pImg)
     //TODO prev not required??
     m_legacy_img = pImg;
     m_currImg = cv::Mat(m_legacy_img);
-    m_currImg.convertTo(m_currImg, CV_32F);
+    m_currImg.convertTo(m_currImg, CV_32F, 1/255.);
 
     bool ok = m_colorCal->CorrectColorBalance( &m_currImg );
     if ( !ok  )
