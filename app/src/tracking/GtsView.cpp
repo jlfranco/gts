@@ -540,10 +540,14 @@ void GtsView::StepTracker( bool forward, CoverageSystem* coverage )
         {
             // non grayscale for trackers that need colors
             // split - apply unwarp to each channel
-            CvSize s      = cvSize( m_imgFrame->width, m_imgFrame->height );
+            CvSize s      = cvSize( m_imgGrey->width, m_imgGrey->height );
             CvSize sCalib = cvSize( m_imgWarp[0]->width,
                                     m_imgWarp[0]->height );
             int         d = m_imgFrame->depth;
+
+            IplImage* tmpColor = cvCreateImage( s, d, 3 );
+            cvConvertImage( m_imgFrame, tmpColor, m_sequencer->Flip() );
+
             IplImage* r    = cvCreateImage( s, d, 1 );
             IplImage* rFix = cvCreateImage( sCalib, d, 1 );
             cvSet( rFix, cvScalar(0) );
@@ -553,7 +557,7 @@ void GtsView::StepTracker( bool forward, CoverageSystem* coverage )
             IplImage* b    = cvCreateImage( s, d, 1 );
             IplImage* bFix = cvCreateImage( sCalib, d, 1 );
             cvSet( bFix, cvScalar(0) );
-            cvSplit( m_imgFrame, b, g, r, 0 );
+            cvSplit( tmpColor, b, g, r, 0 );
             // fix
             m_calScaled->UnwarpGroundPlane( b, bFix );
             m_calScaled->UnwarpGroundPlane( g, gFix );
@@ -567,6 +571,7 @@ void GtsView::StepTracker( bool forward, CoverageSystem* coverage )
             cvReleaseImage( &gFix );
             cvReleaseImage( &r );
             cvReleaseImage( &rFix );
+            cvReleaseImage( &tmpColor );
 
             m_tracker->SetCurrentImage( m_imgWarpColor[m_imgColIndex] );
 
