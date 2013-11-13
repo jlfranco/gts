@@ -546,10 +546,13 @@ void GtsView::StepTracker( bool forward, CoverageSystem* coverage )
             int         d = m_imgFrame->depth;
             IplImage* r    = cvCreateImage( s, d, 1 );
             IplImage* rFix = cvCreateImage( sCalib, d, 1 );
+            cvSet( rFix, cvScalar(0) );
             IplImage* g    = cvCreateImage( s, d, 1 );
             IplImage* gFix = cvCreateImage( sCalib, d, 1 );
+            cvSet( gFix, cvScalar(0) );
             IplImage* b    = cvCreateImage( s, d, 1 );
             IplImage* bFix = cvCreateImage( sCalib, d, 1 );
+            cvSet( bFix, cvScalar(0) );
             cvSplit( m_imgFrame, b, g, r, 0 );
             // fix
             m_calScaled->UnwarpGroundPlane( b, bFix );
