@@ -32,11 +32,11 @@ class RobotMetrics;
    Returns false if matrix is not positive definite*/
 
 bool cholesky (cv::Mat & mat, cv::Mat & output);
-void test(std::string inputFilename, std::string outputFilename);
+void testColorTracker(std::string inputFilename, std::string outputFilename);
 
 class ColorTracker : public RobotTracker
 {
-  friend void test(std::string, std::string);
+  friend void testColorTracker(std::string, std::string);
 public:
     ColorTracker( const CameraCalibration * cam_calib,
                   const RobotMetrics * metrics,
