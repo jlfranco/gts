@@ -586,7 +586,7 @@ void testColorTracker(std::string infn, std::string outfn)
   inputFile.open(infn);
   outputFile.open(outfn);
   double dt, x_l, y_l, x_r, y_r;
-  bool found_l, found_r;
+  bool found_l, found_r, initialized;
   MVec l_blob, r_blob;
   if (!inputFile.is_open())
   {
