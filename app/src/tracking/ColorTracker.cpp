@@ -15,23 +15,17 @@
 #include <string>
 #include <iostream>
 
-bool cholesky (cv::Mat & mat, cv::Mat & output)
+bool cholesky (cv::Mat & inputmat, cv::Mat & output)
 {
     double sum;
-    assert(mat.depth() == CV_32F || mat.depth() == CV_64F);
+    cv::Mat mat;
+    inputmat.assignTo(mat, CV_64FC1);
     output = cv::Mat::zeros(mat.rows, mat.cols, CV_64FC1);
     for (int i = 0; i < mat.rows; ++i)
     {
         for (int j = 0; j <= i; ++j)
         {
-            if (mat.depth() == CV_32F)
-            {
-                sum = double(mat.at<float>(i, j));
-            }
-            else
-            {
-                sum = mat.at<double>(i, j);
-            }
+            sum = mat.at<double>(i, j);
             for (int k = 0; k < j ; ++k)
             {
                 sum -= output.at<double>(i, k) * output.at<double>(j, k);
@@ -64,7 +58,7 @@ ColorTracker::ColorTracker(const CameraCalibration * cam_calib,
     m_metrics           ( metrics ),
     m_colorCal          ( col_calib ),
     m_currImg           ( cv::Mat(currentImage) ),
-    m_kappa             ( -2 ), // This is to try out n + kappa = 3
+    m_kappa             ( 1 ), // This is to try out n + kappa = 3
     m_initialized       ( false ),
     m_current_timestamp ( 0 )
 /* What's missing:
@@ -196,7 +190,7 @@ void ColorTracker::initialize (MVec l_blob, MVec r_blob)
     MVec dif = l_blob - r_blob;
     m_pos.x = pos[0];
     m_pos.y = pos[1];
-    m_angle = atan2(dif[1], dif[0]) + 0.5 * M_PI;
+    m_angle = atan2(-dif[0], dif[1]);
     m_angle = m_angle>M_PI?m_angle-2*M_PI:m_angle;
     m_current_state[0] = m_pos.x;
     m_current_state[1] = m_pos.y;
@@ -319,7 +313,7 @@ void ColorTracker::segment_blobs(const cv::Mat & input_image,
       CV_CHAIN_APPROX_SIMPLE);
 }
 
-// TODO Attention, input_image must be a HSV image!
+/* The input image must be a HSV image */
 bool ColorTracker::find_blob(const cv::Mat & input_image, double hue_ref,
     double hue_thr, double sat_thr, MVec * blob)
 {
@@ -386,7 +380,12 @@ void ColorTracker::predict(double delta_t)
   // Obtain vector of sigma points and corresponding weights
   cv::Mat cov_as_mat = (10 + m_kappa) * cv::Mat(extended_covariance);
   cv::Mat decomposed_cov;
-  cholesky(cov_as_mat, decomposed_cov);
+  if (!cholesky(cov_as_mat, decomposed_cov))
+  {
+    std::cout << "Error - you're not giving me a proper covariance matrix"
+                 << std::endl;
+    exit(1);
+  }
   std::vector<double> sigma_weights;
   std::vector<XVec10> sigma_points;
   sigma_points.push_back(extended_state);
@@ -409,11 +408,11 @@ void ColorTracker::predict(double delta_t)
   std::vector<SVec>::iterator jt;
   for (it = sigma_points.begin(); it != sigma_points.end(); ++it)
   {
-      new_point[0] = (*it)[0] + delta_t * (*it)[3] * cos((*it)[2]);
-      new_point[1] = (*it)[1] + delta_t * (*it)[3] * sin((*it)[2]);
-      new_point[2] = (*it)[2] + delta_t * (*it)[4];
-      new_point[3] = (*it)[3];
-      new_point[4] = (*it)[4];
+      new_point[0] = (*it)[0] + delta_t * (*it)[3] * cos((*it)[2]) + (*it)[5];
+      new_point[1] = (*it)[1] + delta_t * (*it)[3] * sin((*it)[2]) + (*it)[6];
+      new_point[2] = (*it)[2] + delta_t * (*it)[4] + (*it)[7];
+      new_point[3] = (*it)[3] + (*it)[8];
+      new_point[4] = (*it)[4] + (*it)[9];
       transformed_points.push_back(new_point);
   }
   // Recover new mean and covariance;
@@ -465,13 +464,21 @@ void ColorTracker::update(MVec measurement, int direction)
   {
     for (int j = 5; j < 7; ++j)
     {
-      extended_covariance(i, j) = m_meas_noise_cov(i, j);
+      extended_covariance(i, j) = m_meas_noise_cov(i-5, j-5);
     }
   }
   // Obtain vector of sigma points and corresponding weights
   cv::Mat cov_as_mat = (7 + m_kappa) * cv::Mat(extended_covariance);
   cv::Mat decomposed_cov;
-  cholesky(cov_as_mat, decomposed_cov);
+  if (!cholesky(cov_as_mat, decomposed_cov))
+  {
+    std::cout << "Error - you're not giving me a proper covariance matrix"
+                 << std::endl;
+    exit(1);
+  }
+
+  // Obtain predicted measurement by transforming sigma points
+  // with measurement model
   std::vector<double> sigma_weights;
   std::vector<XVec7> sigma_points;
   sigma_points.push_back(extended_state);
@@ -493,7 +500,7 @@ void ColorTracker::update(MVec measurement, int direction)
   {
     avg_sigma_points += sigma_weights[i] * sigma_points[i];
   }
-  // Transform sigma points according to the process model
+  // Transform sigma points according to the measurement model
   std::vector<MVec> transformed_points;
   MVec new_point;
   std::vector<XVec7>::iterator it;
@@ -502,15 +509,15 @@ void ColorTracker::update(MVec measurement, int direction)
   {
     if (direction == -1)
     {
-      new_point[0] = (*it)[0] - m_dist_left * sin((*it)[2]);
-      new_point[1] = (*it)[1] + m_dist_left * cos((*it)[2]);
+      new_point[0] = (*it)[0] - m_dist_left * sin((*it)[2]) + (*it)[5];
+      new_point[1] = (*it)[1] + m_dist_left * cos((*it)[2]) + (*it)[6];
     }
     else
     {
-      new_point[0] = (*it)[0] + m_dist_right * sin((*it)[2]);
-      new_point[1] = (*it)[1] - m_dist_right * cos((*it)[2]);
+      new_point[0] = (*it)[0] + m_dist_right * sin((*it)[2]) + (*it)[5];
+      new_point[1] = (*it)[1] - m_dist_right * cos((*it)[2]) + (*it)[6];
     }
-      transformed_points.push_back(new_point);
+    transformed_points.push_back(new_point);
   }
   // Recover new mean and covariance;
   MVec predicted_meas;
@@ -528,6 +535,8 @@ void ColorTracker::update(MVec measurement, int direction)
       weighted_cov += (*wt) *
               (*jt - predicted_meas) * (*jt - predicted_meas).t();
   }
+  // For the Kalman update, the cross covariance between the state and the
+  // measurement is required - compute this
   CCov cross_cov = CCov::zeros();
   for (unsigned int i = 0; i < sigma_points.size(); ++i)
   {
@@ -551,9 +560,10 @@ void ColorTracker::update(MVec measurement, int direction)
   m_pos.x = m_current_state[0];
   m_pos.y = m_current_state[1];
   m_angle = m_current_state[2];
+  m_error = cv::trace(m_current_cov);
 }
 
-void test(std::string infn, std::string outfn)
+void testColorTracker(std::string infn, std::string outfn)
 {
   std::ifstream inputFile;
   std::ofstream outputFile;
@@ -561,11 +571,22 @@ void test(std::string infn, std::string outfn)
   std::string readLine;
   std::stringstream outLine;
   ColorTracker tracker(NULL, NULL, NULL, NULL);
+  // Hack in measurement/process covariances - To calibrate later!
+  tracker.m_proc_noise_cov = 2 * SCov::eye();
+  tracker.m_proc_noise_cov(0, 0) = 4.;
+  tracker.m_proc_noise_cov(1, 1) = 4.;
+  tracker.m_proc_noise_cov(2, 2) = M_PI/40.;
+  tracker.m_proc_noise_cov(3, 3) = 20.;
+  tracker.m_proc_noise_cov(4, 4) = M_PI/80.;
+  tracker.m_meas_noise_cov = 2. * MCov::eye();
+  tracker.m_dist_left = 10;
+  tracker.m_dist_right = 10;
   inLine.precision(15);
   outLine.precision(15);
   inputFile.open(infn);
   outputFile.open(outfn);
   double dt, x_l, y_l, x_r, y_r;
+  bool found_l, found_r;
   MVec l_blob, r_blob;
   if (!inputFile.is_open())
   {
@@ -579,18 +600,35 @@ void test(std::string infn, std::string outfn)
   }
   while (std::getline(inputFile, readLine))
   {
+    inLine.clear();
     inLine.str(readLine);
-    inLine >> dt >> x_l >> y_l >> x_r >> y_r;
+    inLine >> dt >> found_l >> x_l >> y_l >> found_r >> x_r >> y_r;
     l_blob[0] = x_l; l_blob[1] = y_l;
     r_blob[0] = x_r; r_blob[1] = y_r;
-    tracker.predict(dt);
-    if (l_blob[0] != -1)
+    if (!initialized)
     {
-      tracker.update(l_blob, -1);
+      if (found_l && found_r)
+      {
+        tracker.initialize(l_blob, r_blob);
+        tracker.m_current_cov(0, 0) = 30.;
+        tracker.m_current_cov(1, 1) = 30.;
+        tracker.m_current_cov(2, 2) = M_PI/4;
+        tracker.m_current_cov(3, 3) = 200.;
+        tracker.m_current_cov(4, 4) = M_PI/8;
+        initialized = true;
+      }
     }
-    if (r_blob[0] != -1)
+    else
     {
-      tracker.update(r_blob, 1);
+      tracker.predict(dt);
+      if (found_l)
+      {
+        tracker.update(l_blob, -1);
+      }
+      if (found_r)
+      {
+        tracker.update(r_blob, 1);
+      }
     }
     outLine.str("");
     for (int i = 0; i < 5; ++i)
