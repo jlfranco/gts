@@ -380,12 +380,8 @@ void ColorTracker::predict(double delta_t)
   // Obtain vector of sigma points and corresponding weights
   cv::Mat cov_as_mat = (10 + m_kappa) * cv::Mat(extended_covariance);
   cv::Mat decomposed_cov;
-  if (!cholesky(cov_as_mat, decomposed_cov))
-  {
-    std::cout << "Error - you're not giving me a proper covariance matrix"
-                 << std::endl;
-    exit(1);
-  }
+  assert( cholesky(cov_as_mat, decomposed_cov) &&
+          "Error - you're not giving me a proper covariance matrix");
   std::vector<double> sigma_weights;
   std::vector<XVec10> sigma_points;
   sigma_points.push_back(extended_state);
@@ -470,12 +466,8 @@ void ColorTracker::update(MVec measurement, int direction)
   // Obtain vector of sigma points and corresponding weights
   cv::Mat cov_as_mat = (7 + m_kappa) * cv::Mat(extended_covariance);
   cv::Mat decomposed_cov;
-  if (!cholesky(cov_as_mat, decomposed_cov))
-  {
-    std::cout << "Error - you're not giving me a proper covariance matrix"
-                 << std::endl;
-    exit(1);
-  }
+  assert( cholesky(cov_as_mat, decomposed_cov) &&
+          "Error - you're not giving me a proper covariance matrix");
 
   // Obtain predicted measurement by transforming sigma points
   // with measurement model
