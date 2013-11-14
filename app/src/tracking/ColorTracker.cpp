@@ -1,8 +1,10 @@
-#include "colortracker.h"
+#include "ColorTracker.h"
 
 #include "ColorCalibration.h"
 #include "CameraCalibration.h"
 #include "RobotMetrics.h"
+
+#include "Logging.h"
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -63,6 +65,10 @@ ColorTracker::ColorTracker(const CameraCalibration * cam_calib,
    - timestamp initialization (is it 0 or is it somehow offset?)
 */
 {
+    // convert from cm to px
+    m_dist_left  = col_calib->getLeftDist() *metrics->GetScaleFactor();
+    m_dist_right = col_calib->getRightDist()*metrics->GetScaleFactor();
+
 }
 
 ColorTracker::~ColorTracker()
@@ -115,15 +121,17 @@ CvPoint2D32f ColorTracker::GetBrushBarRight( CvPoint2D32f position, float headin
 
 void ColorTracker::SetCurrentImage(const IplImage *const pImg)
 {
+    //TODO prev not required??
     m_legacy_img = pImg;
     m_currImg = cv::Mat(m_legacy_img);
-    cv::cvtColor(m_currImg, m_hsvImg, CV_BGR2HSV);
-}
+    m_currImg.convertTo(m_currImg, CV_32F, 1/255.);
 
-void ColorTracker::Activate()
-{
-    /* Placeholder function */
-    m_status = TRACKER_ACTIVE;
+    bool ok = m_colorCal->CorrectColorBalance( &m_currImg );
+    if ( !ok  )
+    {
+        LOG_ERROR("CC - Failed to set new image!");
+    }
+    cv::cvtColor(m_currImg, m_hsvImg, CV_BGR2HSV);
 }
 
 bool ColorTracker::Track(double timeStamp)
@@ -167,11 +175,12 @@ bool ColorTracker::Track(double timeStamp)
           GetPosition(), GetHeading(), GetError(), timeStamp, sref ) );
         return true;
       }
+      else
+      {
+        return false;
+      }
     }
-    else
-    {
-      return false;
-    }
+    return true;
 }
 
 void ColorTracker::initialize (MVec l_blob, MVec r_blob)
@@ -205,6 +214,7 @@ void ColorTracker::DoInactiveProcessing(double timeStamp)
     // call to predict(delta_t) after computing the elated
     // time since the last change to the timestamp
     /* Placeholder function */
+    Q_UNUSED(timeStamp);
 }
 
 void ColorTracker::Rewind(double timeStamp)
@@ -236,6 +246,8 @@ void ColorTracker::Rewind(double timeStamp)
 void ColorTracker::SetParam(paramType param, float value)
 {
     /* Placeholder function */
+    Q_UNUSED(param);
+    Q_UNUSED(value);
 }
 
 int ColorTracker::largest_polygon(std::vector<std::vector<cv::Point2i> > & polygons)
@@ -261,7 +273,10 @@ void ColorTracker::segment_blobs(const cv::Mat & input_image,
     std::vector<std::vector<cv::Point2i> > * contours, double hue_ref,
     double hue_thr, double sat_thr)
 {
+  CV_Assert(input_image.type() == CV_32FC3);
+
   contours->clear();
+
   cv::Mat segmented_image = cv::Mat::zeros(
       input_image.rows, input_image.cols, CV_8UC1);
   double distance;
@@ -365,12 +380,8 @@ void ColorTracker::predict(double delta_t)
   // Obtain vector of sigma points and corresponding weights
   cv::Mat cov_as_mat = (10 + m_kappa) * cv::Mat(extended_covariance);
   cv::Mat decomposed_cov;
-  if (!cholesky(cov_as_mat, decomposed_cov))
-  {
-    std::cout << "Error - you're not giving me a proper covariance matrix"
-                 << std::endl;
-    exit(1);
-  }
+  assert( cholesky(cov_as_mat, decomposed_cov) &&
+          "Error - you're not giving me a proper covariance matrix");
   std::vector<double> sigma_weights;
   std::vector<XVec10> sigma_points;
   sigma_points.push_back(extended_state);
@@ -455,12 +466,8 @@ void ColorTracker::update(MVec measurement, int direction)
   // Obtain vector of sigma points and corresponding weights
   cv::Mat cov_as_mat = (7 + m_kappa) * cv::Mat(extended_covariance);
   cv::Mat decomposed_cov;
-  if (!cholesky(cov_as_mat, decomposed_cov))
-  {
-    std::cout << "Error - you're not giving me a proper covariance matrix"
-                 << std::endl;
-    exit(1);
-  }
+  assert( cholesky(cov_as_mat, decomposed_cov) &&
+          "Error - you're not giving me a proper covariance matrix");
 
   // Obtain predicted measurement by transforming sigma points
   // with measurement model
@@ -481,7 +488,7 @@ void ColorTracker::update(MVec measurement, int direction)
   }
   // Find weighted average of sigma points
   XVec7 avg_sigma_points;
-  for (int i = 0; i < sigma_points.size(); ++i)
+  for (unsigned int i = 0; i < sigma_points.size(); ++i)
   {
     avg_sigma_points += sigma_weights[i] * sigma_points[i];
   }
@@ -523,7 +530,7 @@ void ColorTracker::update(MVec measurement, int direction)
   // For the Kalman update, the cross covariance between the state and the
   // measurement is required - compute this
   CCov cross_cov = CCov::zeros();
-  for (int i = 0; i < sigma_points.size(); ++i)
+  for (unsigned int i = 0; i < sigma_points.size(); ++i)
   {
     cross_cov += sigma_weights[i] *
         (sigma_points[i] - avg_sigma_points) *
@@ -571,7 +578,7 @@ void testColorTracker(std::string infn, std::string outfn)
   inputFile.open(infn);
   outputFile.open(outfn);
   double dt, x_l, y_l, x_r, y_r;
-  bool found_l, found_r;
+  bool found_l, found_r, initialized;
   MVec l_blob, r_blob;
   if (!inputFile.is_open())
   {
@@ -583,7 +590,6 @@ void testColorTracker(std::string infn, std::string outfn)
     std::cout << "Couldn't open output file" << std::endl;
     exit(1);
   }
-  bool initialized = false;
   while (std::getline(inputFile, readLine))
   {
     inLine.clear();

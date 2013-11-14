@@ -84,6 +84,7 @@ private:
     void ConnectSignals();
 
     void FillOutCameraCombo( QComboBox& comboBox );
+    void FillOutTrackerCombo( QComboBox& comboBox, int index );
 
     void SetButtonIcon(QToolButton* button, QString iconImage);
 
@@ -115,8 +116,7 @@ private:
     const bool CreateVideoDirectory( const QString& videoDirectoryName );
 
     const ExitStatus::Flags TrackLoad( const WbConfig&           trackConfig,
-                                       ImageGrid*                imageGrid,
-                                       RobotTracker::trackerType tracker );
+                                       ImageGrid*                imageGrid );
 
     const ExitStatus::Flags TrackRun( double rate,
                                       bool trackingActive,
@@ -149,6 +149,7 @@ private slots:
     void TrackLoadButtonClicked();
     void TrackSaveButtonClicked();
     void TrackResetButtonClicked();
+    void TrackerComboChanged( int );
 
 private:
     Ui::TrackRobotWidget* m_ui;

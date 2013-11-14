@@ -91,9 +91,12 @@ public:
         m_pos = robotPosition;
     }
 
-    void SetCurrentImage( const IplImage *const pImg );
+    bool UsesColorImages()
+    {
+        return true;
+    }
 
-    void Activate();
+    void SetCurrentImage( const IplImage *const pImg );
 
     bool Track( double timeStamp );
 
@@ -107,7 +110,7 @@ public:
 
     // LoadTargetImage is not required since the tracking method
     // is target free
-    bool LoadTargetImage(const char * targetFilename) {return false;}
+    bool LoadTargetImage(const char * targetFilename) {(void)targetFilename;return true;}
 
     const CameraCalibration * GetCalibration() const
     {
@@ -149,8 +152,8 @@ private:
 
     double m_current_timestamp;
 
-    double m_dist_left;
-    double m_dist_right;
+    double m_dist_left;  // [px]
+    double m_dist_right; // [px]
 
     SVec m_current_state;
     SCov m_current_cov;

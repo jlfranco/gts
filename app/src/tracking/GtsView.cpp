@@ -22,6 +22,7 @@
 #include "RobotMetrics.h"
 #include "CameraCalibration.h"
 #include "KltTracker.h"
+#include "ColorTracker.h"
 #include "GroundTruthUI.h"
 #include "MathsConstants.h"
 
@@ -68,16 +69,20 @@ GtsView::GtsView() :
     m_fps         ( 0.0 ),
     m_calScaled   ( 0 ),
     m_calNormal   ( 0 ),
+    m_colCalib    ( 0 ),
     m_tracker     ( 0 ),
     m_sequencer   ( 0 ),
     m_imgFrame    ( 0 ),
     m_imgGrey     ( 0 ),
     m_thumbnail   ( 0 ),
     m_metrics     ( 0 ),
-    m_imgIndex    ( 0 )
+    m_imgIndex    ( 0 ),
+    m_imgColIndex ( 0 )
 {
     m_imgWarp[0] = 0;
     m_imgWarp[1] = 0;
+    m_imgWarpColor[0] = 0;
+    m_imgWarpColor[1] = 0;
 }
 
 /**
@@ -93,6 +98,8 @@ void GtsView::Reset()
     cvReleaseImage( &m_imgWarp[1] );
     cvReleaseImage( &m_imgFrame );
     cvReleaseImage( &m_thumbnail );
+    if ( m_imgWarpColor[0] ) cvReleaseImage( &m_imgWarpColor[0] );
+    if ( m_imgWarpColor[1] ) cvReleaseImage( &m_imgWarpColor[1] );
 
     delete m_tracker;
     delete m_calScaled;
@@ -195,6 +202,15 @@ bool GtsView::SetupCalibration( const KeyId     camPosId,
         return false;
     }
 
+    m_colCalib = new ColorCalibration();
+    if ( !m_colCalib->Load( cameraIntrisicConfig ) )
+    {
+        LOG_ERROR("Load color calibration failed!");
+
+        m_id = -1;
+        return false;
+    }
+
     CvSize m_boardsize = cvSize( camPosCalConfig.GetKeyValue(ExtrinsicCalibrationSchema::gridColumnsKey).ToInt(),
                                  camPosCalConfig.GetKeyValue(ExtrinsicCalibrationSchema::gridRowsKey).ToInt() );
 
@@ -252,6 +268,15 @@ bool GtsView::SetupTracker( RobotTracker::trackerType type,
                                         m_imgWarp[m_imgIndex],
                                         biLevelThreshold );
             success = m_tracker->LoadTargetImage( targetFile );
+            break;
+
+        case RobotTracker::COLOR_TRACKER:
+            LOG_TRACE("Creating target tracker - Color Tracker");
+            m_tracker = new ColorTracker( m_calScaled,
+                                          &metrics,
+                                          m_colCalib,
+                                          m_imgWarp[m_imgIndex]);
+            success = true; // no target used
             break;
 
         default:
@@ -489,14 +514,6 @@ void GtsView::StepTracker( bool forward, CoverageSystem* coverage )
 
     if ( m_sequencer->TakeFrame() )
     {
-        assert( "video size & calibration size do not match" &&
-                m_imgFrame->width == m_imgGrey->width &&
-                m_imgFrame->height == m_imgGrey->height );
-
-        // Convert to grey-scale and flip at same time
-        cvConvertImage( m_imgFrame, m_imgGrey, m_sequencer->Flip() );
-        m_calScaled->UnwarpGroundPlane( m_imgGrey, m_imgWarp[m_imgIndex] );
-
         double videoTimeStampInMillisecs = -1.0;
         if ( m_timestamps.size() > 0 )
         {
@@ -511,7 +528,59 @@ void GtsView::StepTracker( bool forward, CoverageSystem* coverage )
             videoTimeStampInMillisecs = m_sequencer->GetTimeStamp();
         }
 
-        m_tracker->SetCurrentImage( m_imgWarp[m_imgIndex] );
+        assert( "video size & calibration size do not match" &&
+                m_imgFrame->width == m_imgGrey->width &&
+                m_imgFrame->height == m_imgGrey->height );
+
+        // Convert to grey-scale and flip at same time
+        cvConvertImage( m_imgFrame, m_imgGrey, m_sequencer->Flip() );
+        m_calScaled->UnwarpGroundPlane( m_imgGrey, m_imgWarp[m_imgIndex] );
+
+        if ( m_tracker->UsesColorImages() )
+        {
+            // non grayscale for trackers that need colors
+            // split - apply unwarp to each channel
+            CvSize s      = cvSize( m_imgGrey->width, m_imgGrey->height );
+            CvSize sCalib = cvSize( m_imgWarp[0]->width,
+                                    m_imgWarp[0]->height );
+            int         d = m_imgFrame->depth;
+
+            IplImage* tmpColor = cvCreateImage( s, d, 3 );
+            cvConvertImage( m_imgFrame, tmpColor, m_sequencer->Flip() );
+
+            IplImage* r    = cvCreateImage( s, d, 1 );
+            IplImage* rFix = cvCreateImage( sCalib, d, 1 );
+            cvSet( rFix, cvScalar(0) );
+            IplImage* g    = cvCreateImage( s, d, 1 );
+            IplImage* gFix = cvCreateImage( sCalib, d, 1 );
+            cvSet( gFix, cvScalar(0) );
+            IplImage* b    = cvCreateImage( s, d, 1 );
+            IplImage* bFix = cvCreateImage( sCalib, d, 1 );
+            cvSet( bFix, cvScalar(0) );
+            cvSplit( tmpColor, b, g, r, 0 );
+            // fix
+            m_calScaled->UnwarpGroundPlane( b, bFix );
+            m_calScaled->UnwarpGroundPlane( g, gFix );
+            m_calScaled->UnwarpGroundPlane( r, rFix );
+            // merge
+            m_imgWarpColor[m_imgColIndex] = cvCreateImage( sCalib, d, 3 );
+            cvMerge( bFix, gFix, rFix, 0, m_imgWarpColor[m_imgColIndex] );
+            cvReleaseImage( &b );
+            cvReleaseImage( &bFix );
+            cvReleaseImage( &g );
+            cvReleaseImage( &gFix );
+            cvReleaseImage( &r );
+            cvReleaseImage( &rFix );
+            cvReleaseImage( &tmpColor );
+
+            m_tracker->SetCurrentImage( m_imgWarpColor[m_imgColIndex] );
+
+            m_imgColIndex = (m_imgColIndex + 1)%2;
+            if ( m_imgWarpColor[m_imgColIndex] )
+            {
+                cvReleaseImage( &m_imgWarpColor[m_imgColIndex] );
+            }
+        }
 
         // Perform motion detection so
         // that recovery is possible.

@@ -13,11 +13,16 @@ class ColorCalibration
     ~ColorCalibration();
     /* TODO: Implement functions to load/save from/to WbConfig files
        (c.f. CameraCalibration, RobotMetrics) */
+
     // Methods
     // Corrects color balance in place
-    void CorrectColorBalance(cv::Mat * inputImage); /*TODO*/
+    bool CorrectColorBalance(QImage& im) const;
+    bool CorrectColorBalance(cv::Mat * inputImage) const;
+    bool CorrectColorBalance(IplImage* inputImage) const;
     // Automatically determines gray levels using gray world assumption
-    void AutoCalibrate(cv::Mat * sampleImage); /*TODO*/
+    void AutoCalibrate(QImage& im);
+    void AutoCalibrate(cv::Mat * sampleImage);
+
     // Accessors
     float  getHueLeft()   const { return m_hueLeft; }
     float  getHueRight()  const { return m_hueRight; }
@@ -30,6 +35,7 @@ class ColorCalibration
     float  getGrayB()     const { return m_gray_b; }
     double getLeftDist()  const { return m_dist_l; }
     double getRightDist() const { return m_dist_r; }
+    double getMethod()    const { return m_method; }
     void   setHueLeft   ( const float val )  { m_hueLeft = val; }
     void   setHueRight  ( const float val )  { m_hueRight = val; }
     void   setHueThr    ( const float val )  { m_hueThr = val; }
@@ -42,10 +48,16 @@ class ColorCalibration
     void   setGrayL     ( const float val )  { m_gray_l = val; }
     void   setLeftDist  ( const double val ) { m_dist_l = val; }
     void   setRightDist ( const double val ) { m_dist_r = val; }
+    void   setMethod    ( const bool val  )  { m_method = val; }
 
-    bool   Run( const WbConfig& config);
+    bool   Load( const WbConfig& config);
+    bool   Test( const WbConfig& config, const QString& path, QImage* output );
 
     protected:
+
+    cv::Mat QtToCv( const QImage& im ) const;
+    QImage  CvToQt( const cv::Mat& mat ) const;
+
     /* Selected hues for left and right markers */
     float m_hueLeft;
     float m_hueRight;
@@ -65,11 +77,14 @@ class ColorCalibration
        These three points are assumed to lay in the same line  */
     double m_dist_l;
     double m_dist_r;
+    /* If true them use user provided gray levels, otherwise will determine
+       gray levels automatically. */
+    bool m_method;
+
+    QImage im;
 
     bool   HexStrRgbToHsv( const QString& hexRgbStr, float* h, float* s, float* v );
     bool   HexStrToRgbScaled( const QString& hexRgbStr, float* r, float* g, float* b );
-
-    bool   Load( const WbConfig& config);
 };
 
 #endif // COLORCALIBRATION_H

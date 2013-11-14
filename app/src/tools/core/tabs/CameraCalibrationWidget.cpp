@@ -117,6 +117,11 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
     AddMapper( m_imageGridMapperColor );
     selectionMode = NONE;
 
+    m_ui->m_hueLeftLabel->setEnabled(false);
+    m_ui->m_hueRightLabel->setEnabled(false);
+    m_ui->m_hueGrayLabel->setEnabled(false);
+    m_ui->m_colorCalibrateBtn->setEnabled(false);
+
     AddMapper( new CalibrateCameraResultsMapper( *m_ui->m_resultsTextBrowser ) );
 
     QDoubleValidator* validator = new QDoubleValidator;
@@ -231,6 +236,12 @@ void CameraCalibrationWidget::ImageTableItemChangedColor(QTableWidgetItem* curre
         m_imageGridMapperColor->SetCurrentImage(
             currentRowNameItem->data(ColorCalibrationImageTableMapper::idRoleOnName)
                                      .toString());
+
+        m_ui->m_hueLeftLabel->setEnabled(true);
+        m_ui->m_hueRightLabel->setEnabled(true);
+        m_ui->m_hueGrayLabel->setEnabled(true);
+        m_ui->m_colorCalibrateBtn->setEnabled(true);
+
         ReloadCurrentConfig( m_imageTableMapperColor ); //must exclude table here to ensure it still has a "current row" for delete
     }
 }
@@ -357,8 +368,6 @@ void CameraCalibrationWidget::ReloadCurrentConfigToolSpecific()
 
     const WbKeyValues::ValueIdPairList colorCalibImages(
                 GetCurrentConfig().GetKeyValues( CalibrationSchema::colorCalibImageFileKey ) );
-
-    m_ui->m_colorCalibrateBtn->setEnabled( colorCalibImages.size() >= 1 );
 
     /* TODO replace this with a mapper */
     KeyValue hueLeftKeyTmp = GetCurrentConfig().GetKeyValue(CalibrationSchema::hueLeftKey);
@@ -509,6 +518,11 @@ void CameraCalibrationWidget::HueChanged( QRgb val )
 
         config.SetKeyValue( CalibrationSchema::hueGrayKey,
                             KeyValue::from(hex));
+
+        config.SetKeyValue( CalibrationSchema::methodKey,
+                            KeyValue::from(false));
+        // update gray stuff
+        m_ui->m_method->setChecked(false);
         cout << "Hue Gray: ";
         break;
     case NONE:
@@ -521,23 +535,46 @@ void CameraCalibrationWidget::HueChanged( QRgb val )
 
 void CameraCalibrationWidget::ColorCalibrateBtnClicked()
 {
-    /*TODO implement me! */
-    CalibrationAlgorithm alg;
+    KeyId kId = m_imageGridMapperColor->GetCurrentImageKey();
+    if ( kId.isNull() )
+    {
+        Message::Show( 0,
+                       tr( "Image Required!" ),
+                       tr( "Please select an image before running color calibration." ),
+                       Message::Severity_Critical );
+        return;
+    }
+    WbConfig config = GetCurrentConfig();
+    KeyValue kVal = config.GetKeyValue( CalibrationSchema::colorCalibImageFileKey, kId);
+    if ( kVal.IsNull() )
+    {
+        Message::Show( 0,
+                       tr( "Camera Color Calibration Tool" ),
+                       tr( "Image not found!" ),
+                       Message::Severity_Critical );
+        return;
+    }
 
     UnknownLengthProgressDlg* const progressDialog = new UnknownLengthProgressDlg( this );
     progressDialog->Start( tr( "Performing color calibration" ), tr( "" ) );
 
+    const QString path( config.GetAbsoluteFileNameFor( kVal.ToQString() ) );
+
     ColorCalibration colorCalib;
-    const bool calibrationSuccessful = colorCalib.Run( GetCurrentConfig() );
+    QImage imRes;
+    const bool calibrationSuccessful = colorCalib.Test( config, path, &imRes );
 
     if ( calibrationSuccessful )
     {
-        progressDialog->Complete( tr( "Camera Color Calibration Successful" ),
-                                  tr( "The camera has been color calibrated.\n"
-                                      "Average reprojection error is: %1." )
-                                      .arg( GetCurrentConfig()
-                                            .GetKeyValue( CalibrationSchema::avgReprojectionErrorKey )
-                                            .ToDouble() ) );
+        /*TODO remove me, debug! */
+        QLabel * label_img = new QLabel (this);
+        label_img->setWindowFlags(Qt::Window);
+        label_img->setPixmap( QPixmap::fromImage( imRes ) );
+        label_img->setWindowTitle("Color corrected image");
+        label_img->show();
+
+        progressDialog->Complete( tr( "Camera Color Calibration Tool" ),
+                                  tr( "Color correction completed.\n") );
     }
     else
     {
@@ -545,7 +582,7 @@ void CameraCalibrationWidget::ColorCalibrateBtnClicked()
 
         Message::Show( 0,
                        tr( "Camera Color Calibration Tool" ),
-                       tr( "NOT IMPLEMENTED!" ),
+                       tr( "Color calibration failed!" ),
                        Message::Severity_Critical );
     }
 }

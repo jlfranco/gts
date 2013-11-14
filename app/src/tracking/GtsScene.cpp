@@ -100,8 +100,7 @@ bool GtsScene::LoadCameraConfig( const KeyId               camPosId,
                                  const WbConfig&           camPosConfig,
                                  const WbConfig&           roomConfig,
                                  const WbConfig&           robotConfig,
-                                 const WbConfig&           trackConfig,
-                                 RobotTracker::trackerType tracker )
+                                 const WbConfig&           trackConfig )
 {
     LOG_INFO(QObject::tr("Getting camera parameters %1.").arg(m_ln));
 
@@ -111,6 +110,8 @@ bool GtsScene::LoadCameraConfig( const KeyId               camPosId,
     int biLevelThreshold = trackConfig.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::biLevelThreshold).ToInt();
     double nccThreshold = trackConfig.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::nccThreshold).ToDouble();
     int resolution = trackConfig.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::resolution).ToInt();
+
+    RobotTracker::trackerType tracker = (RobotTracker::trackerType) trackConfig.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::tracker).ToInt();
 
     for (WbKeyValues::ValueIdPairList::const_iterator it = cameraMappingIds.begin(); it != cameraMappingIds.end(); ++it)
     {
@@ -125,6 +126,7 @@ bool GtsScene::LoadCameraConfig( const KeyId               camPosId,
                 biLevelThreshold = trackConfig.GetKeyValue(TrackRobotSchema::PerCameraTrackingParams::biLevelThreshold, it->id).ToInt();
                 nccThreshold = trackConfig.GetKeyValue(TrackRobotSchema::PerCameraTrackingParams::nccThreshold, it->id).ToDouble();
                 resolution = trackConfig.GetKeyValue(TrackRobotSchema::PerCameraTrackingParams::resolution, it->id).ToInt();
+                tracker = (RobotTracker::trackerType) trackConfig.GetKeyValue(TrackRobotSchema::PerCameraTrackingParams::tracker, it->id).ToInt();
             }
 
             break;
@@ -144,6 +146,7 @@ bool GtsScene::LoadCameraConfig( const KeyId               camPosId,
     LOG_INFO(QObject::tr("Tracking param - biLevel: %1.").arg(biLevelThreshold));
     LOG_INFO(QObject::tr("Tracking param - ncc: %1.").arg(nccThreshold));
     LOG_INFO(QObject::tr("Tracking param - resolution: %1.").arg(resolution));
+    LOG_INFO(QObject::tr("Tracking param - tracker: %1.").arg((int)tracker));
 
     m_view[m_ln].SetId( m_ln );
 
@@ -185,6 +188,11 @@ bool GtsScene::LoadCameraConfig( const KeyId               camPosId,
         {
             shutter = -1;
             gain = -1;
+        }
+        break;
+        case RobotTracker::COLOR_TRACKER :
+        {
+            /* just to avoid compiler warning */
         }
         break;
     }

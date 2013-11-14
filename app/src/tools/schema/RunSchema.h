@@ -25,6 +25,7 @@ namespace RunSchema
 {
     extern const KeyName schemaName;
     extern const KeyName roomIdKey;
+    extern const KeyName trackerKey;
 }
 
 #endif // RUNSCHEMA_H_

@@ -59,8 +59,7 @@ public:
                            const WbConfig&           camPosConfig,
                            const WbConfig&           roomConfig,
                            const WbConfig&           robotConfig,
-                           const WbConfig&           trackConfig,
-                           RobotTracker::trackerType tracker );
+                           const WbConfig&           trackConfig );
 
     unsigned int GetNumMaxCameras() const { return GtsScene::kMaxCameras; }
 

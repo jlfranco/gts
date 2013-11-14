@@ -54,6 +54,7 @@
 static const int BI_LEVEL_DEFAULT = 128;
 static const double NCC_DEFAULT = 0.3;
 static const double RESOLUTION_DEFAULT = 15.0;
+static const double TRACKER_DEFAULT = 0;
 
 static const int ROOM_POSITION_COLUMN = 0;
 static const int FILE_COLUMN = 1;
@@ -131,6 +132,21 @@ void TrackRobotWidget::FillOutCameraCombo( QComboBox& comboBox )
     }
 }
 
+void TrackRobotWidget::FillOutTrackerCombo( QComboBox& comboBox, int index )
+{
+    comboBox.clear();
+    comboBox.addItem( "Klt", QVariant( 0 ) );
+    comboBox.addItem( "Color Tracker", QVariant( 1 ) );
+    comboBox.setCurrentIndex(index);
+}
+
+void TrackRobotWidget::TrackerComboChanged( int val )
+{
+    WbConfig config = GetCurrentConfig().GetParent();
+    config.SetKeyValue( RunSchema::trackerKey,
+                        KeyValue::from( val ));
+}
+
 void TrackRobotWidget::ResetUi()
 {
     m_ui->m_playBtn->setEnabled(false);
@@ -149,11 +165,13 @@ void TrackRobotWidget::ResetUi()
     m_ui->m_nccThresholdSpinBox->setEnabled(true);
     m_ui->m_resolutionSpinBox->setEnabled(true);
     m_ui->m_trackerThresholdSpinBox->setEnabled(true);
+    m_ui->m_trackerCombo->setEnabled(true);
 
     // enable camera specific parameters
     m_ui->m_camNccThresholdSpinBox->setEnabled(true);
     m_ui->m_camResolutionSpinBox->setEnabled(true);
     m_ui->m_camTrackerThresholdSpinBox->setEnabled(true);
+    m_ui->m_camTrackerCombo->setEnabled(true);
 }
 
 void TrackRobotWidget::ConnectSignals()
@@ -206,6 +224,11 @@ void TrackRobotWidget::ConnectSignals()
                       SIGNAL( clicked() ),
                       this,
                       SLOT( SaveBtnClicked() ) );
+    QObject::connect( m_ui->m_trackerCombo,
+                      SIGNAL( currentIndexChanged (int) ),
+                      this,
+                      SLOT( TrackerComboChanged(int) ) );
+
 }
 
 void TrackRobotWidget::SetupKeyboardShortcuts()
@@ -248,6 +271,7 @@ void TrackRobotWidget::CreateMappers()
     AddMapper(biLevelThreshold, m_ui->m_trackerThresholdSpinBox);
     AddMapper(nccThreshold,     m_ui->m_nccThresholdSpinBox);
     AddMapper(resolution,       m_ui->m_resolutionSpinBox);
+    AddMapper(tracker,          m_ui->m_trackerCombo);
 }
 
 const QString TrackRobotWidget::GetCameraId() const
@@ -277,6 +301,8 @@ void TrackRobotWidget::ReloadCurrentConfigToolSpecific()
     const WbConfig& config = GetCurrentConfig();
 
     FillOutCameraCombo( *m_ui->m_positionCombo );
+    FillOutTrackerCombo( *m_ui->m_trackerCombo,
+                         config.GetKeyValue( RunSchema::trackerKey ).ToInt() );
 
     // Get the selected room name
     const WbConfig& runConfig = config.GetParent();
@@ -362,6 +388,7 @@ void TrackRobotWidget::CameraComboChanged()
     int biLevelThreshold = config.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::biLevelThreshold).ToInt();
     double nccThreshold = config.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::nccThreshold).ToDouble();
     int resolution = config.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::resolution).ToInt();
+    int tracker = config.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::tracker).ToInt();
 
     for (WbKeyValues::ValueIdPairList::const_iterator it = cameraMappingIds.begin(); it != cameraMappingIds.end(); ++it)
     {
@@ -376,6 +403,7 @@ void TrackRobotWidget::CameraComboChanged()
                 biLevelThreshold = config.GetKeyValue(TrackRobotSchema::PerCameraTrackingParams::biLevelThreshold, it->id).ToInt();
                 nccThreshold = config.GetKeyValue(TrackRobotSchema::PerCameraTrackingParams::nccThreshold, it->id).ToDouble();
                 resolution = config.GetKeyValue(TrackRobotSchema::PerCameraTrackingParams::resolution, it->id).ToInt();
+                tracker = config.GetKeyValue(TrackRobotSchema::PerCameraTrackingParams::tracker, it->id).ToInt();
             }
 
             break;
@@ -387,10 +415,12 @@ void TrackRobotWidget::CameraComboChanged()
     m_ui->m_camTrackerThresholdSpinBox->setValue(biLevelThreshold);
     m_ui->m_camNccThresholdSpinBox->setValue(nccThreshold);
     m_ui->m_camResolutionSpinBox->setValue(resolution);
+    m_ui->m_trackerCombo->setCurrentIndex(tracker);
 
     m_ui->m_camTrackerThresholdSpinBox->setEnabled(!useGlobalParams);
     m_ui->m_camNccThresholdSpinBox->setEnabled(!useGlobalParams);
     m_ui->m_camResolutionSpinBox->setEnabled(!useGlobalParams);
+    m_ui->m_camTrackerCombo->setEnabled(!useGlobalParams);
 }
 
 void TrackRobotWidget::UseGlobalBtnClicked()
@@ -405,22 +435,27 @@ void TrackRobotWidget::UseGlobalBtnClicked()
 	        (config.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::nccThreshold).ToDouble());
 	    m_ui->m_camResolutionSpinBox->setValue
 	        (config.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::resolution).ToInt());
+	    m_ui->m_camTrackerCombo->setCurrentIndex
+	        (config.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::tracker).ToInt());
 
 	    m_ui->m_camTrackerThresholdSpinBox->setEnabled(false);
 	    m_ui->m_camNccThresholdSpinBox->setEnabled(false);
 	    m_ui->m_camResolutionSpinBox->setEnabled(false);
+	    m_ui->m_camTrackerCombo->setEnabled(false);
 	}
 	else
 	{
 	    m_ui->m_camTrackerThresholdSpinBox->setValue(BI_LEVEL_DEFAULT);
 	    m_ui->m_camNccThresholdSpinBox->setValue(NCC_DEFAULT);
 	    m_ui->m_camResolutionSpinBox->setValue(RESOLUTION_DEFAULT);
+	    m_ui->m_camTrackerCombo->setCurrentIndex(TRACKER_DEFAULT);
 
         if (!m_loaded)
         {
             m_ui->m_camTrackerThresholdSpinBox->setEnabled(true);
             m_ui->m_camNccThresholdSpinBox->setEnabled(true);
             m_ui->m_camResolutionSpinBox->setEnabled(true);
+            m_ui->m_camTrackerCombo->setEnabled(true);
         }
 	}
 }
@@ -486,6 +521,7 @@ void TrackRobotWidget::SaveBtnClicked()
         config.KeepKeys( biLevelThreshold, idsToKeep );
         config.KeepKeys( nccThreshold, idsToKeep );
         config.KeepKeys( resolution, idsToKeep );
+        config.KeepKeys( tracker, idsToKeep );
 
         const KeyId cameraKeyId = config.AddKeyValue( positionIdKey,
                                                       KeyValue::from( cameraId ) );
@@ -501,6 +537,9 @@ void TrackRobotWidget::SaveBtnClicked()
                             cameraKeyId );
         config.SetKeyValue( resolution,
                             KeyValue::from( QString().setNum( m_ui->m_camResolutionSpinBox->value() ) ),
+                            cameraKeyId );
+        config.SetKeyValue( tracker,
+                            KeyValue::from( QString().setNum( m_ui->m_camTrackerCombo->currentIndex() ) ),
                             cameraKeyId );
     }
 }
@@ -617,6 +656,16 @@ bool TrackRobotWidget::IsDataValid() const
         Tool::HighlightLabel(m_ui->m_robotLabel, false);
     }
 
+    if ( m_ui->m_trackerCombo->currentText().isEmpty() )
+    {
+        valid = valid && false;
+        Tool::HighlightLabel(m_ui->m_trackerLabel, true);
+    }
+    else
+    {
+        Tool::HighlightLabel(m_ui->m_trackerLabel, false);
+    }
+
     return valid;
 }
 
@@ -646,11 +695,13 @@ const WbSchema TrackRobotWidget::CreateSchema()
                            KeyNameList() <<
                                biLevelThreshold <<
                                nccThreshold <<
-                               resolution,
+                               resolution <<
+                               tracker,
                            DefaultValueMap()
                                .WithDefault(biLevelThreshold, KeyValue::from(BI_LEVEL_DEFAULT))
                                .WithDefault(nccThreshold,     KeyValue::from(NCC_DEFAULT))
-                               .WithDefault(resolution,       KeyValue::from(RESOLUTION_DEFAULT)));
+                               .WithDefault(resolution,       KeyValue::from(RESOLUTION_DEFAULT))
+                               .WithDefault(tracker,          KeyValue::from(TRACKER_DEFAULT)));
     }
 
     {
@@ -663,7 +714,8 @@ const WbSchema TrackRobotWidget::CreateSchema()
                                useGlobalParams <<
                                biLevelThreshold <<
                                nccThreshold <<
-                               resolution);
+                               resolution <<
+                               tracker);
     }
 
     return schema;
@@ -841,8 +893,7 @@ void TrackRobotWidget::TrackLoadButtonClicked()
         progressDialog->Start( tr( "Loading" ), tr( "" ) );
 
         ExitStatus::Flags exitCode = TrackLoad( config,
-                                                m_ui->m_imageGrid,
-                                                RobotTracker::KLT_TRACKER );
+                                                m_ui->m_imageGrid );
 
         successful = ( exitCode == ExitStatus::OK_TO_CONTINUE );
 
@@ -871,11 +922,13 @@ void TrackRobotWidget::TrackLoadButtonClicked()
         m_ui->m_nccThresholdSpinBox->setEnabled(false);
         m_ui->m_resolutionSpinBox->setEnabled(false);
         m_ui->m_trackerThresholdSpinBox->setEnabled(false);
+        m_ui->m_trackerCombo->setEnabled(false);
 
         // enable camera specific parameters
         m_ui->m_camNccThresholdSpinBox->setEnabled(false);
         m_ui->m_camResolutionSpinBox->setEnabled(false);
         m_ui->m_camTrackerThresholdSpinBox->setEnabled(false);
+        m_ui->m_camTrackerCombo->setEnabled(false);
 
         SetupKeyboardShortcuts();
 
@@ -960,11 +1013,13 @@ void TrackRobotWidget::TrackResetButtonClicked()
     m_ui->m_nccThresholdSpinBox->setEnabled(true);
     m_ui->m_resolutionSpinBox->setEnabled(true);
     m_ui->m_trackerThresholdSpinBox->setEnabled(true);
+    m_ui->m_trackerCombo->setEnabled(true);
 
     // disable camera specific params
     m_ui->m_camNccThresholdSpinBox->setEnabled(true);
     m_ui->m_camResolutionSpinBox->setEnabled(true);
     m_ui->m_camTrackerThresholdSpinBox->setEnabled(true);
+    m_ui->m_camTrackerCombo->setEnabled(true);
 
     m_fpsSet = false;
 }
@@ -1096,8 +1151,7 @@ void TrackRobotWidget::SetPosition( double position )
 // ----------------------------------------------------------------------------------------------------------------------------
 
 const ExitStatus::Flags TrackRobotWidget::TrackLoad( const WbConfig&               trackConfig,
-											             ImageGrid*                imageGrid,
-											             RobotTracker::trackerType tracker )
+                                                     ImageGrid*                imageGrid )
 {
     ExitStatus::Flags exitStatus = ExitStatus::OK_TO_CONTINUE;
 
@@ -1181,8 +1235,7 @@ const ExitStatus::Flags TrackRobotWidget::TrackLoad( const WbConfig&            
                                                camPosConfig,
                                                roomConfig,
                                                robotConfig,
-                                               trackConfig,
-                                               tracker );
+                                               trackConfig );
     }
 
     if (successful)

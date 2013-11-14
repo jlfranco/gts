@@ -79,6 +79,11 @@ public:
         return m_history;
     }
 
+    bool UsesColorImages()
+    {
+        return false;
+    }
+
     void SetPosition( CvPoint2D32f robotPosition )
     {
         fprintf( stderr, "KltTracker::SetPosition\n");
