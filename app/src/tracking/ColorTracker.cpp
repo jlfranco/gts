@@ -126,11 +126,7 @@ void ColorTracker::SetCurrentImage(const IplImage *const pImg)
     m_currImg = cv::Mat(m_legacy_img);
     m_currImg.convertTo(m_currImg, CV_32F, 1/255.);
 
-    bool ok = m_colorCal->CorrectColorBalance( &m_currImg );
-    if ( !ok  )
-    {
-        LOG_ERROR("CC - Failed to set new image!");
-    }
+    m_colorCal->CorrectColorBalance( &m_currImg );
     cv::cvtColor(m_currImg, m_hsvImg, CV_BGR2HSV);
 }
 

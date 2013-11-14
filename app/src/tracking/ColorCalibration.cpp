@@ -141,6 +141,25 @@ bool ColorCalibration::Load( const WbConfig& config)
     return true;
 }
 
+cv::Mat ColorCalibration::QtToCv( const QImage& im ) const
+{
+    // http://stackoverflow.com/questions/17127762/cvmat-to-qimage-and-back#answer-17137998
+    cv::Mat tmp( im.height(), im.width(), CV_8UC3, (uchar*)im.bits(), im.bytesPerLine() );
+    cv::Mat imMat;
+    cvtColor( tmp, imMat, CV_BGR2RGB );
+    return imMat;
+}
+
+QImage ColorCalibration::CvToQt( const cv::Mat& mat ) const
+{
+    cv::Mat matData;
+    cv::cvtColor( mat, matData, CV_BGR2RGB );
+    assert( matData.isContinuous() );
+    QImage im = QImage( matData.data, matData.cols, matData.rows,
+                        3*matData.cols, QImage::Format_RGB888);
+    return im;
+}
+
 bool ColorCalibration::Test( const WbConfig& config, const QString& path, QImage* output )
 {
     if ( !Load( config ) )
@@ -167,7 +186,7 @@ bool ColorCalibration::Test( const WbConfig& config, const QString& path, QImage
     return true;
 }
 
-void ColorCalibration::CorrectColorBalance(cv::Mat * inputImage)
+void ColorCalibration::CorrectColorBalance(cv::Mat * inputImage) const
 {
   double cc_r, cc_g, cc_b;
   if (m_gray_l == m_gray_r)
@@ -244,7 +263,6 @@ void ColorCalibration::CorrectColorBalance(cv::Mat * inputImage)
       break;
     }
   }
-  return true;
 }
 
 void ColorCalibration::AutoCalibrate(QImage& im)
