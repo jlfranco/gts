@@ -68,7 +68,13 @@ ColorTracker::ColorTracker(const CameraCalibration * cam_calib,
     // convert from cm to px
     m_dist_left  = col_calib->getLeftDist() *metrics->GetScaleFactor();
     m_dist_right = col_calib->getRightDist()*metrics->GetScaleFactor();
-
+    m_proc_noise_cov = 2 * SCov::eye();
+    m_proc_noise_cov(0, 0) = 4.;
+    m_proc_noise_cov(1, 1) = 4.;
+    m_proc_noise_cov(2, 2) = M_PI/40.;
+    m_proc_noise_cov(3, 3) = 20.;
+    m_proc_noise_cov(4, 4) = M_PI/80.;
+    m_meas_noise_cov = 2. * MCov::eye();
 }
 
 ColorTracker::~ColorTracker()
@@ -198,11 +204,11 @@ void ColorTracker::initialize (MVec l_blob, MVec r_blob)
     m_current_state[3] = 0;
     m_current_state[4] = 0;
     m_current_cov = SCov::zeros();
-    m_current_cov(0, 0) = 5;
-    m_current_cov(1, 1) = 5;
-    m_current_cov(2, 2) = M_PI/10;
-    m_current_cov(3, 3) = 5;
-    m_current_cov(4, 4) = M_PI/10;
+    m_current_cov(0, 0) = 30;
+    m_current_cov(1, 1) = 30;
+    m_current_cov(2, 2) = M_PI/4;
+    m_current_cov(3, 3) = 200;
+    m_current_cov(4, 4) = M_PI/8;
     // Set flag to initialized
     m_initialized = true;
 }
