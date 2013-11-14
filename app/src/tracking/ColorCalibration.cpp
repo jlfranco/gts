@@ -127,20 +127,53 @@ bool ColorCalibration::Run( const WbConfig& config)
 
 void ColorCalibration::CorrectColorBalance(cv::Mat * inputImage)
 {
+  double cc_r, cc_g, cc_b;
+  if (m_gray_l == m_gray_r)
+  {
+    cc_r = 1.;
+  }
+  else
+  {
+    cc_r = (m_gray_l - pow(m_gray_r, 2)) /
+           (m_gray_r - pow(m_gray_r, 2)) ;
+  }
+  if (m_gray_l == m_gray_g)
+  {
+    cc_g = 1.;
+  }
+  else
+  {
+    cc_g = (m_gray_l - pow(m_gray_g, 2)) /
+           (m_gray_g - pow(m_gray_g, 2)) ;
+  }
+  if (m_gray_l == m_gray_b)
+  {
+    cc_b = 1.;
+  }
+  else
+  {
+    cc_b = (m_gray_l - pow(m_gray_b, 2)) /
+           (m_gray_b - pow(m_gray_b, 2)) ;
+  }
   switch (inputImage->depth())
   {
     case CV_8U:
     {
       cv::MatIterator_<cv::Vec3b> it;
+      double b, g, r;
       for (it = inputImage -> begin<cv::Vec3b>();
            it != inputImage -> end<cv::Vec3b>(); ++it)
       {
-        int b = (0.5 + int( (*it)[0] ) * 255 * m_gray_l) / m_gray_b;
-        int g = (0.5 + int( (*it)[1] ) * 255 * m_gray_l) / m_gray_g;
-        int r = (0.5 + int( (*it)[2] ) * 255 * m_gray_l) / m_gray_r;
-        (*it)[0] = uchar( b );
-        (*it)[1] = uchar( g );
-        (*it)[2] = uchar( r );
+
+        b = cc_b * double((*it)[0]) / 255. +
+            (1 - cc_b) * pow( double((*it)[0]) / 255., 2 );
+        g = cc_g * double((*it)[1]) / 255. +
+            (1 - cc_g) * pow( double((*it)[1]) / 255., 2 );
+        r = cc_r * double((*it)[2]) / 255. +
+            (1 - cc_r) * pow( double((*it)[2]) / 255., 2 );
+        (*it)[0] = uchar( 255 * b );
+        (*it)[1] = uchar( 255 * g );
+        (*it)[2] = uchar( 255 * r );
       }
       break;
     }
@@ -150,9 +183,9 @@ void ColorCalibration::CorrectColorBalance(cv::Mat * inputImage)
       for (it = inputImage -> begin<cv::Vec3f>();
            it != inputImage -> end<cv::Vec3f>(); ++it)
       {
-        (*it)[0] *= m_gray_l / m_gray_b;
-        (*it)[1] *= m_gray_l / m_gray_g;
-        (*it)[2] *= m_gray_l / m_gray_r;
+        (*it)[0] = cc_b * (*it)[0] + (1 - cc_b) * pow((*it)[0], 2);
+        (*it)[1] = cc_g * (*it)[1] + (1 - cc_g) * pow((*it)[1], 2);
+        (*it)[2] = cc_r * (*it)[2] + (1 - cc_r) * pow((*it)[2], 2);
       }
       break;
     }
@@ -162,9 +195,9 @@ void ColorCalibration::CorrectColorBalance(cv::Mat * inputImage)
       for (it = inputImage -> begin<cv::Vec3d>();
            it != inputImage -> end<cv::Vec3d>(); ++it)
       {
-        (*it)[0] *= m_gray_l / m_gray_b;
-        (*it)[1] *= m_gray_l / m_gray_g;
-        (*it)[2] *= m_gray_l / m_gray_r;
+        (*it)[0] = cc_b * (*it)[0] + (1 - cc_b) * pow((*it)[0], 2);
+        (*it)[1] = cc_g * (*it)[1] + (1 - cc_g) * pow((*it)[1], 2);
+        (*it)[2] = cc_r * (*it)[2] + (1 - cc_r) * pow((*it)[2], 2);
       }
       break;
     }
