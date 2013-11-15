@@ -45,6 +45,8 @@
 #include "FileUtilities.h"
 #include "FileDialogs.h"
 
+#include "Logging.h"
+
 #include "WbConfigTools.h"
 
 #if defined(__MINGW32__) || defined(__GNUC__)
@@ -476,7 +478,6 @@ void CameraCalibrationWidget::HueGrayBtnClicked()
     selectionMode = GRAY;
 }
 
-using namespace std;
 void CameraCalibrationWidget::HueChanged( QRgb val )
 {
     // remove the alpha crap
@@ -500,14 +501,14 @@ void CameraCalibrationWidget::HueChanged( QRgb val )
         m_ui->m_hueLeft->setText(hexSymbol);
         config.SetKeyValue( CalibrationSchema::hueLeftKey,
                             KeyValue::from(hex));
-        cout << "Hue Left: ";
+        LOG_INFO( QObject::tr("Hue Left: %1").arg( hexSymbol ) );
         break;
     case RIGHT:
         m_ui->m_hueRight->setStyleSheet(str);
         m_ui->m_hueRight->setText(hexSymbol);
         config.SetKeyValue( CalibrationSchema::hueRightKey,
                             KeyValue::from(hex));
-        cout << "Hue Right: ";
+        LOG_INFO( QObject::tr("Hue Right: %1").arg( hexSymbol ) );
         break;
     case GRAY:
         m_ui->m_hueGray->setStyleSheet(str);
@@ -520,14 +521,13 @@ void CameraCalibrationWidget::HueChanged( QRgb val )
                             KeyValue::from(false));
         // update gray stuff
         m_ui->m_method->setChecked(false);
-        cout << "Hue Gray: ";
+        LOG_INFO( QObject::tr("Hue Gray: %1").arg( hexSymbol ) );
         break;
     case NONE:
     default:
         break;
     }
     selectionMode = NONE;
-    cout << hexSymbol.toStdString() << endl;
 }
 
 void CameraCalibrationWidget::ColorCalibrateBtnClicked()
