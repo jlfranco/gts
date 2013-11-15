@@ -86,17 +86,17 @@ bool ColorCalibration::HexStrRgbToHsv( const QString& hexRgbStr, float* h, float
     LOG_TRACE(QObject::tr("CC: Validating RGB->HSV conversion results"));
     if ( *h > 360 || *h < 0 )
     {
-        LOG_ERROR(QObject::tr("CC: Invalid HSV H value:").arg(*h));;
+        LOG_ERROR(QObject::tr("CC: Invalid HSV H value: %1").arg(*h));;
         return false;
     }
     if ( *s > 1   || * s < 0 )
     {
-        LOG_ERROR(QObject::tr("CC: Invalid HSV S value.").arg(*s));
+        LOG_ERROR(QObject::tr("CC: Invalid HSV S value. %1").arg(*s));
         return false;
     }
     if ( *v > 1   || * v < 0 )
     {
-        LOG_ERROR(QObject::tr("CC: Invalid HSV V value.").arg(*v));
+        LOG_ERROR(QObject::tr("CC: Invalid HSV V value. %1").arg(*v));
         return false;
     }
 
