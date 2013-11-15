@@ -583,7 +583,7 @@ p, li { white-space: pre-wrap; }
                <number>0</number>
               </property>
               <item row="0" column="0">
-               <widget class="SelectableImageGrid" name="m_imageGridColor" native="true"/>
+               <widget class="ImageGrid" name="m_imageGridColor" native="true"/>
               </item>
               <item row="0" column="1">
                <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -1010,15 +1010,6 @@ p, li { white-space: pre-wrap; }
    <extends>QWidget</extends>
    <header>ImageGrid.h</header>
    <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>SelectableImageGrid</class>
-   <extends>QWidget</extends>
-   <header>SelectableImageGrid.h</header>
-   <container>1</container>
-   <slots>
-    <signal>hueSet(QRbg)</signal>
-   </slots>
   </customwidget>
  </customwidgets>
  <tabstops>

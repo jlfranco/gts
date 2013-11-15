@@ -21,7 +21,6 @@
 #include "ui_CameraCalibrationWidget.h"
 
 #include "CalibrationImageGridMapper.h"
-#include "SelectableImageGridMapper.h"
 #include "CalibrationImageTableMapper.h"
 #include "ColorCalibrationImageTableMapper.h"
 #include "VideoSource.h"
@@ -64,7 +63,6 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
     m_ui          ( new Ui::CameraCalibrationWidget ),
     m_imageGridMapper( 0 ),
     m_imageTableMapper( 0 ),
-    m_imageGridMapperColor( 0 ),
     m_imageTableMapperColor( 0 )
 {
     m_ui->setupUi( this );
@@ -113,9 +111,8 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
 
     m_imageTableMapperColor = new ColorCalibrationImageTableMapper( *m_ui->m_imagesTableWidgetColor );
     AddMapper( m_imageTableMapperColor );
-    m_imageGridMapperColor = new SelectableImageGridMapper( *m_ui->m_imageGridColor );
-    AddMapper( m_imageGridMapperColor );
     selectionMode = NONE;
+    m_imgViewColor = m_ui->m_imageGridColor->AddBlankImage( m_ui->m_imageGrid->size() );
 
     m_ui->m_hueLeftLabel->setEnabled(false);
     m_ui->m_hueRightLabel->setEnabled(false);
@@ -185,9 +182,8 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
                       SIGNAL( clicked() ),
                       this,
                       SLOT( ColorCalibrateBtnClicked() ) );
-
-    QObject::connect( m_ui->m_imageGridColor,
-                      SIGNAL( hueSet(QRgb) ),
+    QObject::connect( m_imgViewColor,
+                      SIGNAL( hueChanged(QRgb) ),
                       this,
                       SLOT( HueChanged(QRgb) ) );
 
@@ -227,22 +223,32 @@ void CameraCalibrationWidget::ImageTableItemChangedColor(QTableWidgetItem* curre
 {
     Q_UNUSED(previous);
 
-    assert( m_imageGridMapperColor );
-    if ( m_imageGridMapperColor && current )
+    if ( current )
     {
         QTableWidgetItem* currentRowNameItem =
             m_ui->m_imagesTableWidgetColor->item(current->row(),
-                                            ColorCalibrationImageTableMapper::nameColumn );
-        m_imageGridMapperColor->SetCurrentImage(
-            currentRowNameItem->data(ColorCalibrationImageTableMapper::idRoleOnName)
-                                     .toString());
+                                                 ColorCalibrationImageTableMapper::nameColumn );
+        WbConfig config( GetCurrentConfig() );
+        const WbConfig cameraConfig( config.FindAncestor( KeyName( "camera" ) ) );
+        QString qs = currentRowNameItem->data(ColorCalibrationImageTableMapper::idRoleOnName)
+            .toString();
+        const KeyValue kv = config.GetKeyValue( CalibrationSchema::colorCalibImageFileKey,
+                                                qs );
+        if ( !kv.IsNull() )
+        {
+            QString qsFull = config.GetAbsoluteFileNameFor( kv.ToQString() );
+            m_imgViewColor->Clear();
+            m_imgViewColor->SetImage( qsFull );
+            m_imgViewColor->update();
 
-        m_ui->m_hueLeftLabel->setEnabled(true);
-        m_ui->m_hueRightLabel->setEnabled(true);
-        m_ui->m_hueGrayLabel->setEnabled(true);
-        m_ui->m_colorCalibrateBtn->setEnabled(true);
+            m_ui->m_hueLeftLabel->setEnabled(true);
+            m_ui->m_hueRightLabel->setEnabled(true);
+            m_ui->m_hueGrayLabel->setEnabled(true);
+            m_ui->m_colorCalibrateBtn->setEnabled(true);
+        }
 
-        ReloadCurrentConfig( m_imageTableMapperColor ); //must exclude table here to ensure it still has a "current row" for delete
+        //must exclude table here to ensure it still has a "current row" for delete
+        ReloadCurrentConfig( m_imageTableMapperColor );
     }
 }
 
@@ -454,29 +460,20 @@ void CameraCalibrationWidget::CaptureCancelBtnClicked()
 
 void CameraCalibrationWidget::HueLeftBtnClicked()
 {
-    if ( ! m_imageGridMapperColor->GetCurrentImageKey().isEmpty() )
-    {
-        m_imageGridMapperColor->selectionMode( 1 );
-        selectionMode = LEFT;
-    }
+    m_imgViewColor->selectionMode( 1 );
+    selectionMode = LEFT;
 }
 
 void CameraCalibrationWidget::HueRightBtnClicked()
 {
-    if ( ! m_imageGridMapperColor->GetCurrentImageKey().isEmpty() )
-    {
-        m_imageGridMapperColor->selectionMode( 1 );
-        selectionMode = RIGHT;
-    }
+    m_imgViewColor->selectionMode( 1 );
+    selectionMode = RIGHT;
 }
 
 void CameraCalibrationWidget::HueGrayBtnClicked()
 {
-    if ( ! m_imageGridMapperColor->GetCurrentImageKey().isEmpty() )
-    {
-        m_imageGridMapperColor->selectionMode( 1 );
-        selectionMode = GRAY;
-    }
+    m_imgViewColor->selectionMode( 1 );
+    selectionMode = GRAY;
 }
 
 using namespace std;
@@ -535,34 +532,16 @@ void CameraCalibrationWidget::HueChanged( QRgb val )
 
 void CameraCalibrationWidget::ColorCalibrateBtnClicked()
 {
-    KeyId kId = m_imageGridMapperColor->GetCurrentImageKey();
-    if ( kId.isNull() )
-    {
-        Message::Show( 0,
-                       tr( "Image Required!" ),
-                       tr( "Please select an image before running color calibration." ),
-                       Message::Severity_Critical );
-        return;
-    }
     WbConfig config = GetCurrentConfig();
-    KeyValue kVal = config.GetKeyValue( CalibrationSchema::colorCalibImageFileKey, kId);
-    if ( kVal.IsNull() )
-    {
-        Message::Show( 0,
-                       tr( "Camera Color Calibration Tool" ),
-                       tr( "Image not found!" ),
-                       Message::Severity_Critical );
-        return;
-    }
 
     UnknownLengthProgressDlg* const progressDialog = new UnknownLengthProgressDlg( this );
     progressDialog->Start( tr( "Performing color calibration" ), tr( "" ) );
 
-    const QString path( config.GetAbsoluteFileNameFor( kVal.ToQString() ) );
-
     ColorCalibration colorCalib;
     QImage imRes;
-    const bool calibrationSuccessful = colorCalib.Test( config, path, &imRes );
+    const bool calibrationSuccessful = colorCalib.Test( config,
+                                                        m_imgViewColor->GetCurrentImage()
+                                                        , &imRes );
 
     if ( calibrationSuccessful )
     {

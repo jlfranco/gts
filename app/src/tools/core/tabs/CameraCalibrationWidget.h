@@ -37,7 +37,6 @@ class CameraHardware;
 class ImageView;
 class CaptureLiveBtnController;
 class CalibrationImageGridMapper;
-class SelectableImageGridMapper;
 class CalibrationImageTableMapper;
 class ColorCalibrationImageTableMapper;
 
@@ -96,8 +95,8 @@ private:
     CalibrationImageTableMapper* m_imageTableMapper;
     enum selectionModes {NONE, LEFT, RIGHT, GRAY} selectionMode;
 
-    SelectableImageGridMapper* m_imageGridMapperColor;
     ColorCalibrationImageTableMapper* m_imageTableMapperColor;
+    ImageView* m_imgViewColor;
     QString hueLeft;
     QString hueRight;
     QString hueGray;
