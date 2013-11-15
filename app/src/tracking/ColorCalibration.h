@@ -49,7 +49,7 @@ class ColorCalibration
     void   setMethod    ( const bool val  )  { m_method = val; }
 
     bool   Load( const WbConfig& config);
-    bool   Test( const WbConfig& config, const QString& path, QImage* output );
+    bool   Test( const WbConfig& config, const QImage& input, QImage* output );
 
     protected:
 

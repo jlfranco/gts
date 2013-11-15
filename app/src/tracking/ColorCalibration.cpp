@@ -160,7 +160,7 @@ QImage ColorCalibration::CvToQt( const cv::Mat& mat ) const
     return im;
 }
 
-bool ColorCalibration::Test( const WbConfig& config, const QString& path, QImage* output )
+bool ColorCalibration::Test( const WbConfig& config, const QImage& input, QImage* output )
 {
     if ( !Load( config ) )
     {
@@ -169,10 +169,10 @@ bool ColorCalibration::Test( const WbConfig& config, const QString& path, QImage
     }
 
     using namespace cv;
-    cv::Mat imMat = imread( path.toStdString() , CV_LOAD_IMAGE_COLOR );
+    cv::Mat imMat = QtToCv(input);
     if ( !imMat.data )
     {
-        LOG_ERROR( QObject::tr( "Failed to open image: %1" ).arg( path.toStdString().c_str() ) );
+        LOG_ERROR( QObject::tr( "Failed to convert image!" ) );
         return false;
     }
 

@@ -62,21 +62,28 @@ public:
 
     void setZoom( double zoom ) { m_zoom = zoom; };
 
- signals:
+    bool selectionMode( const int force = -1 );
+
+signals:
     void onLeftClick( int id, int x, int y );
     void onRightClick( int id );
+
+    void hueChanged( QRgb val );
 
 protected:
     virtual void resizeEvent( QResizeEvent* );
     virtual void paintEvent ( QPaintEvent* );
 
     virtual void mousePressEvent( QMouseEvent* event );
+    virtual void mouseMoveEvent(QMouseEvent* event);
+    virtual void mouseReleaseEvent(QMouseEvent* event);
 
 private:
     void UpdateScaledPixmap();
     const Qt::TransformationMode GetImageTransformationMode() const;
 
     QImage                  m_image;
+    QImage                  m_scaledImage;
     QPixmap                 m_scaledPixmap;
     Qt::AspectRatioMode     m_aspectRatioMode;
     std::auto_ptr< QLabel > m_captionLabel;
@@ -86,6 +93,11 @@ private:
     double                  m_zoom;
 
     int                     m_id;
+
+    bool m_selectionModeEnabled;
+    bool m_selectionStarted;
+    bool m_drawSelection;
+    QRect m_selectionRect;
 };
 
 #endif // IMAGEVIEW_H
