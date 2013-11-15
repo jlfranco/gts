@@ -77,8 +77,14 @@ bool ColorCalibration::HexStrRgbToHsv( const QString& hexRgbStr, float* h, float
             }
         }
     }
-
-    /* 8 bit images */
+    if (hTmp > 360.)
+    {
+      hTmp -= 360.;
+    }
+    if (hTmp < 0.)
+    {
+      hTmp += 360.;
+    }
     *h = hTmp;
     *s = sTmp;
     *v = vTmp;
