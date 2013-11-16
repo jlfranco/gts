@@ -231,7 +231,6 @@ void CameraCalibrationWidget::ImageTableItemChangedColor(QTableWidgetItem* curre
             m_ui->m_imagesTableWidgetColor->item(current->row(),
                                                  ColorCalibrationImageTableMapper::nameColumn );
         WbConfig config( GetCurrentConfig() );
-        const WbConfig cameraConfig( config.FindAncestor( KeyName( "camera" ) ) );
         QString qs = currentRowNameItem->data(ColorCalibrationImageTableMapper::idRoleOnName)
             .toString();
         const KeyValue kv = config.GetKeyValue( CalibrationSchema::colorCalibImageFileKey,
@@ -241,6 +240,7 @@ void CameraCalibrationWidget::ImageTableItemChangedColor(QTableWidgetItem* curre
             QString qsFull = config.GetAbsoluteFileNameFor( kv.ToQString() );
             m_imgViewColor->Clear();
             m_imgViewColor->SetImage( qsFull );
+            m_imgViewColor->SetCaption( "" ); // clear caption
             m_imgViewColor->update();
 
             m_ui->m_hueLeftLabel->setEnabled(true);
@@ -539,18 +539,48 @@ void CameraCalibrationWidget::ColorCalibrateBtnClicked()
 
     ColorCalibration colorCalib;
     QImage imRes;
-    const bool calibrationSuccessful = colorCalib.Test( config,
-                                                        m_imgViewColor->GetCurrentImage()
-                                                        , &imRes );
+
+    QString errMsg, qsFull;
+    bool calibrationSuccessful = false;
+
+    const QTableWidgetItem* currentItem =
+        m_ui->m_imagesTableWidgetColor->item(m_ui->m_imagesTableWidgetColor->currentRow(),0);
+    if (!currentItem)
+    {
+        // user has not selected any image
+        errMsg = QString("Select an image from the table.");
+    }
+    else
+    {
+        QString qs = currentItem->data(ColorCalibrationImageTableMapper::idRoleOnName)
+            .toString();
+        const KeyValue kv = config.GetKeyValue( CalibrationSchema::colorCalibImageFileKey,
+                                                qs );
+        if ( !kv.IsNull() )
+        {
+            qsFull = config.GetAbsoluteFileNameFor( kv.ToQString() );
+            calibrationSuccessful = colorCalib.Test( config,
+                                                     qsFull,
+                                                     &imRes );
+            if ( !calibrationSuccessful )
+            {
+                errMsg = QString("Color calibration failed...");
+            }
+        }
+        else
+        {
+            // this should not happen
+            errMsg = QString("Image not found.");
+        }
+    }
 
     if ( calibrationSuccessful )
     {
-        /*TODO remove me, debug! */
-        QLabel * label_img = new QLabel (this);
-        label_img->setWindowFlags(Qt::Window);
-        label_img->setPixmap( QPixmap::fromImage( imRes ) );
-        label_img->setWindowTitle("Color corrected image");
-        label_img->show();
+        QString qs(QObject::tr("%1-colorCorrected.png").arg(qsFull));
+        m_imgViewColor->Clear();
+        m_imgViewColor->SetImage( qs );
+        m_imgViewColor->SetCaption( "Color corrected image"  );
+        m_imgViewColor->update();
 
         progressDialog->Complete( tr( "Camera Color Calibration Tool" ),
                                   tr( "Color correction completed.\n") );
@@ -561,7 +591,7 @@ void CameraCalibrationWidget::ColorCalibrateBtnClicked()
 
         Message::Show( 0,
                        tr( "Camera Color Calibration Tool" ),
-                       tr( "Color calibration failed!" ),
+                       tr( "Color calibration failed: %1" ).arg(errMsg),
                        Message::Severity_Critical );
     }
 }

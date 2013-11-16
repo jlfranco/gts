@@ -147,15 +147,6 @@ bool ColorCalibration::Load( const WbConfig& config)
     return true;
 }
 
-cv::Mat ColorCalibration::QtToCv( const QImage& im ) const
-{
-    // http://stackoverflow.com/questions/17127762/cvmat-to-qimage-and-back#answer-17137998
-    cv::Mat tmp( im.height(), im.width(), CV_8UC3, (uchar*)im.bits(), im.bytesPerLine() );
-    cv::Mat imMat;
-    cvtColor( tmp, imMat, CV_BGR2RGB );
-    return imMat;
-}
-
 QImage ColorCalibration::CvToQt( const cv::Mat& mat ) const
 {
     cv::Mat matData;
@@ -166,7 +157,7 @@ QImage ColorCalibration::CvToQt( const cv::Mat& mat ) const
     return im;
 }
 
-bool ColorCalibration::Test( const WbConfig& config, const QImage& input, QImage* output )
+bool ColorCalibration::Test( const WbConfig& config, const QString& path, QImage* output )
 {
     if ( !Load( config ) )
     {
@@ -174,11 +165,11 @@ bool ColorCalibration::Test( const WbConfig& config, const QImage& input, QImage
         return false;
     }
 
-    using namespace cv;
-    cv::Mat imMat = QtToCv(input);
+
+    cv::Mat imMat = cv::imread( path.toStdString() , CV_LOAD_IMAGE_COLOR );
     if ( !imMat.data )
     {
-        LOG_ERROR( QObject::tr( "Failed to convert image!" ) );
+        LOG_ERROR( QObject::tr( "Failed to open image: %1" ).arg( path.toStdString().c_str() ) );
         return false;
     }
 
@@ -187,6 +178,9 @@ bool ColorCalibration::Test( const WbConfig& config, const QImage& input, QImage
         AutoCalibrate( &imMat );
     }
     CorrectColorBalance( &imMat );
+
+    QString qs(QObject::tr("%1-colorCorrected.png").arg(path));
+    imwrite( qs.toStdString(), imMat );
 
     *output = CvToQt( imMat );
     return true;
@@ -269,13 +263,6 @@ void ColorCalibration::CorrectColorBalance(cv::Mat * inputImage) const
       break;
     }
   }
-}
-
-void ColorCalibration::AutoCalibrate(QImage& im)
-{
-    cv::Mat imMat = QtToCv( im );
-    AutoCalibrate( &imMat );
-    im = CvToQt( imMat );
 }
 
 void ColorCalibration::AutoCalibrate(cv::Mat *sampleImage)
