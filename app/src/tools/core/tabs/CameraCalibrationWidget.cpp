@@ -98,6 +98,9 @@ CameraCalibrationWidget::CameraCalibrationWidget( CameraHardware& cameraHardware
                                       CalibrationSchema::gridColumnsKey ) );
 
     AddMapper( CalibrationSchema::hueThresholdKey, m_ui->m_hueThreshold );
+    AddMapper( CalibrationSchema::hueLeftKey, m_ui->m_hueLeft );
+    AddMapper( CalibrationSchema::hueRightKey, m_ui->m_hueRight );
+    AddMapper( CalibrationSchema::hueGrayKey, m_ui->m_hueGray );
     AddMapper( CalibrationSchema::luminanceMaxKey, m_ui->m_luminanceMax );
     AddMapper( CalibrationSchema::luminanceMinKey, m_ui->m_luminanceMin );
     AddMapper( CalibrationSchema::saturationMinKey, m_ui->m_saturationMin );
@@ -486,10 +489,9 @@ void CameraCalibrationWidget::HueChanged( QRgb val )
 
     // build hex only
     QString hex = QString("%1").arg(valNum);
-    QString hexSymbol = QString("#%1").arg(valNum);
 
     // build format string
-    QString str = QString("background-color:%1;").arg(hexSymbol);
+    QString str = QString("background-color:#%1;").arg(hex);
 
     // set color and save info
     WbConfig config( GetCurrentConfig() );
@@ -498,21 +500,21 @@ void CameraCalibrationWidget::HueChanged( QRgb val )
     {
     case LEFT:
         m_ui->m_hueLeft->setStyleSheet(str);
-        m_ui->m_hueLeft->setText(hexSymbol);
+        m_ui->m_hueLeft->setText(hex);
         config.SetKeyValue( CalibrationSchema::hueLeftKey,
                             KeyValue::from(hex));
-        LOG_INFO( QObject::tr("Hue Left: %1").arg( hexSymbol ) );
+        LOG_INFO( QObject::tr("Hue Left: #%1").arg( hex ) );
         break;
     case RIGHT:
         m_ui->m_hueRight->setStyleSheet(str);
-        m_ui->m_hueRight->setText(hexSymbol);
+        m_ui->m_hueRight->setText(hex);
         config.SetKeyValue( CalibrationSchema::hueRightKey,
                             KeyValue::from(hex));
-        LOG_INFO( QObject::tr("Hue Right: %1").arg( hexSymbol ) );
+        LOG_INFO( QObject::tr("Hue Right: #%1").arg( hex ) );
         break;
     case GRAY:
         m_ui->m_hueGray->setStyleSheet(str);
-        m_ui->m_hueGray->setText(hexSymbol);
+        m_ui->m_hueGray->setText(hex);
 
         config.SetKeyValue( CalibrationSchema::hueGrayKey,
                             KeyValue::from(hex));
@@ -521,7 +523,7 @@ void CameraCalibrationWidget::HueChanged( QRgb val )
                             KeyValue::from(false));
         // update gray stuff
         m_ui->m_method->setChecked(false);
-        LOG_INFO( QObject::tr("Hue Gray: %1").arg( hexSymbol ) );
+        LOG_INFO( QObject::tr("Hue Gray: #%1").arg( hex ) );
         break;
     case NONE:
     default:
