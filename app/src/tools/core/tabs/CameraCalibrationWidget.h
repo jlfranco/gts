@@ -96,6 +96,7 @@ private:
     enum selectionModes {NONE, LEFT, RIGHT, GRAY} selectionMode;
 
     ColorCalibrationImageTableMapper* m_imageTableMapperColor;
+    cv::Mat colorCorrected;
     ImageView* m_imgViewColor;
     QString hueLeft;
     QString hueRight;

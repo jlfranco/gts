@@ -147,17 +147,14 @@ bool ColorCalibration::Load( const WbConfig& config)
     return true;
 }
 
-QImage ColorCalibration::CvToQt( const cv::Mat& mat ) const
+QImage ColorCalibration::CvToQt( const cv::Mat& src ) const
 {
-    cv::Mat matData;
-    cv::cvtColor( mat, matData, CV_BGR2RGB );
-    assert( matData.isContinuous() );
-    QImage im = QImage( matData.data, matData.cols, matData.rows,
-                        3*matData.cols, QImage::Format_RGB888);
-    return im;
+    cvtColor( src, src, CV_BGR2RGB );
+    QImage imgIn= QImage((uchar*) src.data, src.cols, src.rows, src.step, QImage::Format_RGB888);
+    return imgIn;
 }
 
-bool ColorCalibration::Test( const WbConfig& config, const QString& path, QImage* output )
+bool ColorCalibration::Test( const WbConfig& config, cv::Mat& imageToCorrect, QImage& output )
 {
     if ( !Load( config ) )
     {
@@ -166,23 +163,13 @@ bool ColorCalibration::Test( const WbConfig& config, const QString& path, QImage
     }
 
 
-    cv::Mat imMat = cv::imread( path.toStdString() , CV_LOAD_IMAGE_COLOR );
-    if ( !imMat.data )
-    {
-        LOG_ERROR( QObject::tr( "Failed to open image: %1" ).arg( path.toStdString().c_str() ) );
-        return false;
-    }
-
     if ( m_method )
     {
-        AutoCalibrate( &imMat );
+        AutoCalibrate( &imageToCorrect );
     }
-    CorrectColorBalance( &imMat );
+    CorrectColorBalance( &imageToCorrect );
 
-    QString qs(QObject::tr("%1-colorCorrected.png").arg(path));
-    imwrite( qs.toStdString(), imMat );
-
-    *output = CvToQt( imMat );
+    output = CvToQt( imageToCorrect );
     return true;
 }
 

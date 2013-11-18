@@ -561,12 +561,29 @@ void CameraCalibrationWidget::ColorCalibrateBtnClicked()
         if ( !kv.IsNull() )
         {
             qsFull = config.GetAbsoluteFileNameFor( kv.ToQString() );
-            calibrationSuccessful = colorCalib.Test( config,
-                                                     qsFull,
-                                                     &imRes );
-            if ( !calibrationSuccessful )
+            if( !colorCorrected.empty() )
             {
-                errMsg = QString("Color calibration failed...");
+                /*
+                  image is loaded from file before color correcting,
+                  release it here before loading a new one.
+                  (not sure if this is required)
+                */
+                colorCorrected.release();
+            }
+            colorCorrected = cv::imread( qsFull.toStdString() , CV_LOAD_IMAGE_COLOR );
+            if( !colorCorrected.data )
+            {
+                errMsg = QString(QObject::tr( "Failed to open image: %1" ).arg( qsFull.toStdString().c_str() ) );
+            }
+            else
+            {
+                calibrationSuccessful = colorCalib.Test( config,
+                                                         colorCorrected,
+                                                         imRes );
+                if ( !calibrationSuccessful )
+                {
+                    errMsg = QString("Color calibration failed...");
+                }
             }
         }
         else
@@ -580,7 +597,8 @@ void CameraCalibrationWidget::ColorCalibrateBtnClicked()
     {
         QString qs(QObject::tr("%1-colorCorrected.png").arg(qsFull));
         m_imgViewColor->Clear();
-        m_imgViewColor->SetImage( qs );
+        m_imgViewColor->SetImage( imRes );
+
         m_imgViewColor->SetCaption( "Color corrected image"  );
         m_imgViewColor->update();
 
