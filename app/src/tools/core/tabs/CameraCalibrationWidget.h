@@ -54,6 +54,7 @@ public:
     virtual const QString CannotCloseReason() const;
 
 public slots:
+    // Should be connected to image callback on hue sample selection.
     void HueChanged( QRgb val );
 
 private slots:
@@ -66,10 +67,11 @@ private slots:
 
     void ColorFromFileClicked();
     void ColorCalibrateBtnClicked();
+    void ImageTableItemChangedColor(QTableWidgetItem* current, QTableWidgetItem* previous);
+    // Used to sample hue values from image
     void HueLeftBtnClicked();
     void HueRightBtnClicked();
     void HueGrayBtnClicked();
-    void ImageTableItemChangedColor(QTableWidgetItem* current, QTableWidgetItem* previous);
 
 private:
     const QString GetSubSchemaDefaultFileName() const;
@@ -96,7 +98,7 @@ private:
     enum selectionModes {NONE, LEFT, RIGHT, GRAY} selectionMode;
 
     ColorCalibrationImageTableMapper* m_imageTableMapperColor;
-    cv::Mat colorCorrected;
+    cv::Mat colorCorrected; // tmp memory for cv->Qt
     ImageView* m_imgViewColor;
     QString hueLeft;
     QString hueRight;

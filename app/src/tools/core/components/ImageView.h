@@ -62,12 +62,25 @@ public:
 
     void setZoom( double zoom ) { m_zoom = zoom; };
 
+    /**
+     * Toggle selection on the current image. This allows the used to mark a rectangle
+     * in the image and extract the average color from it.
+     *
+     * @param force If >= 0, will enable selection mode (instead of toggling)
+     *
+     * @return ?selection mode enabled:disabled.
+     */
     bool selectionMode( const int force = -1 );
 
 signals:
     void onLeftClick( int id, int x, int y );
     void onRightClick( int id );
 
+    /**
+     * Indicates that a rectangle selection has been completed.
+     *
+     * @param val The average color of within the selected rectangle.
+     */
     void hueChanged( QRgb val );
 
 protected:
