@@ -47,11 +47,41 @@ class ColorCalibration
     void   setRightDist ( const double val ) { m_dist_r = val; }
     void   setMethod    ( const bool val  )  { m_method = val; }
 
+    /**
+     * Will load configuration into ColorCalibration instance.
+     * Should be called after instantiating the class.
+     * Parameters are set in "Cameras"->"Color Calibration".
+     *
+     * @param config Camera configuration.
+     *
+     * @return ?success:failure.
+     */
     bool   Load( const WbConfig& config);
+
+    /**
+     * Will test the current color correction parameters on the
+     * selected calibration image. The color corrected version
+     * will be displayed, allowing the user to select hue values
+     * on the corrected image.
+     *
+     * @param config Camera configuration.
+     * @param imageToCorrect Must have memory allocated and must me kept valid while @a output is used.
+     * @param output Color corrected Qt version of @a imageToCorrect.
+     *
+     * @return ?success:failure.
+     */
     bool   Test( const WbConfig& config, cv::Mat& imageToCorrect, QImage& output );
 
     protected:
 
+    /**
+     * Converts cv::Mat to QImage.
+     * Memory allocated for @a mat must be valid while the output is used.
+     *
+     * @param mat Image to convert.
+     *
+     * @return Converted image.
+     */
     QImage CvToQt( const cv::Mat& mat ) const;
 
     /* Selected hues for left and right markers */
@@ -77,8 +107,16 @@ class ColorCalibration
        gray levels automatically. */
     bool m_method;
 
-    QImage im;
-
+    /**
+     * Will convert a string @a hexRgbStr with format "RRGGBB" to hsv.
+     *
+     * @param hexRgbStr Input string.
+     * @param h output
+     * @param s output
+     * @param v output
+     *
+     * @return ?success:failure.
+     */
     bool   HexStrRgbToHsv( const QString& hexRgbStr, float* h, float* s, float* v );
 
     /**
