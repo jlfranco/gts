@@ -14,7 +14,7 @@ ColorCalibration::~ColorCalibration()
 {
 }
 
-bool ColorCalibration::HexStrToRgbScaled ( const QString& hexRgbStr, float* r, float* g, float* b )
+bool ColorCalibration::HexStrToRgbScaled ( const QString& hexRgbStr, float* r, float* g, float* b, const float scale )
 {
     if ( hexRgbStr.length() != 6 )
     {
@@ -33,9 +33,9 @@ bool ColorCalibration::HexStrToRgbScaled ( const QString& hexRgbStr, float* r, f
     bInt = blue.toInt ( &convOk, 16 ); if ( !convOk ) return false;
 
     /* scale */
-    *r = ((float)rInt)/255.0;
-    *g = ((float)gInt)/255.0;
-    *b = ((float)bInt)/255.0;
+    *r = ((float)rInt)/scale;
+    *g = ((float)gInt)/scale;
+    *b = ((float)bInt)/scale;
     return true;
 }
 

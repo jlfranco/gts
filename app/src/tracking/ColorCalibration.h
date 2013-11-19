@@ -80,7 +80,22 @@ class ColorCalibration
     QImage im;
 
     bool   HexStrRgbToHsv( const QString& hexRgbStr, float* h, float* s, float* v );
-    bool   HexStrToRgbScaled( const QString& hexRgbStr, float* r, float* g, float* b );
+
+    /**
+     * Will extract RGB value @a r, @a g, and @a b from a hex string  @a hexRgbStr with
+     * format "RRGGBB".
+     * Resulting RGB values will be divided by @a scale. Useful when going from RGB [0,255]
+     * to the float representation in [0,1].
+     *
+     * @param hexRgbStr Input.
+     * @param r output
+     * @param g output
+     * @param b output
+     * @param scale Values will be RGB/scale
+     *
+     * @return ?success:failure.
+     */
+    bool   HexStrToRgbScaled( const QString& hexRgbStr, float* r, float* g, float* b, const float scale = 255.0 );
 };
 
 #endif // COLORCALIBRATION_H
