@@ -51,15 +51,10 @@ ColorTracker::ColorTracker(const CameraCalibration * cam_calib,
                            const RobotMetrics * metrics,
                            const ColorCalibration * col_calib,
                            const IplImage * currentImage) :
-    m_pos               ( cv::Point2f(0, 0) ),
-    m_angle             ( 0 ),
-    m_error             ( 0 ),
     m_cal               ( cam_calib ),
     m_metrics           ( metrics ),
     m_colorCal          ( col_calib ),
     m_currImg           ( cv::Mat(currentImage) ),
-    m_kappa             ( 1 ), // This is to try out n + kappa = 3
-    m_initialized       ( false ),
     m_current_timestamp ( 0 )
 /* What's missing:
    - timestamp initialization (is it 0 or is it somehow offset?)
@@ -68,13 +63,6 @@ ColorTracker::ColorTracker(const CameraCalibration * cam_calib,
     // convert from cm to px
     m_dist_left  = col_calib->getLeftDist() *metrics->GetScaleFactor();
     m_dist_right = col_calib->getRightDist()*metrics->GetScaleFactor();
-    m_proc_noise_cov = 2 * SCov::eye();
-    m_proc_noise_cov(0, 0) = 4.;
-    m_proc_noise_cov(1, 1) = 4.;
-    m_proc_noise_cov(2, 2) = M_PI/40.;
-    m_proc_noise_cov(3, 3) = 20.;
-    m_proc_noise_cov(4, 4) = M_PI/80.;
-    m_meas_noise_cov = 2. * MCov::eye();
 }
 
 ColorTracker::~ColorTracker()
@@ -147,7 +135,7 @@ bool ColorTracker::Track(double timeStamp)
           m_colorCal->getHueThr(), m_colorCal->getMinSat(), &l_blob);
       bool found_r = find_blob(m_hsvImg, m_colorCal->getHueRight(),
           m_colorCal->getHueThr(), m_colorCal->getMinSat(), &r_blob);
-      if (m_initialized)
+      if ( ukf.isInitialized() )
       {
         predict(delta_t);
         if (found_l)
@@ -163,15 +151,16 @@ bool ColorTracker::Track(double timeStamp)
       {
         if ( found_l && found_r )
         {
-          initialize(l_blob, r_blob);
+          ukf.initialize( l_blob, r_blob, m_dist_left, m_dist_right );
         }
       }
-      if (m_initialized)
+      if ( ukf.isInitialized() )
       {
         // Log everything
+        SVec currentState = ukf.getCurrentState();
         std::stringstream swriter;
         swriter.precision(20); // Is this precision overkill?
-        swriter << m_current_state[3] << " " << m_current_state[4];
+        swriter << currentState[3] << " " << currentState[4];
         std::string sref = swriter.str();
         m_history.emplace_back( TrackEntry(
           GetPosition(), GetHeading(), GetError(), timeStamp, sref ) );
@@ -187,26 +176,7 @@ bool ColorTracker::Track(double timeStamp)
 
 void ColorTracker::initialize (MVec l_blob, MVec r_blob)
 {
-    MVec pos = 0.5 * ( (1 - m_dist_right + m_dist_left) * r_blob +
-                       (1 + m_dist_right - m_dist_left) * l_blob );
-    MVec dif = l_blob - r_blob;
-    m_pos.x = pos[0];
-    m_pos.y = pos[1];
-    m_angle = atan2(-dif[0], dif[1]);
-    m_angle = m_angle>M_PI?m_angle-2*M_PI:m_angle;
-    m_current_state[0] = m_pos.x;
-    m_current_state[1] = m_pos.y;
-    m_current_state[2] = m_angle;
-    m_current_state[3] = 0;
-    m_current_state[4] = 0;
-    m_current_cov = SCov::zeros();
-    m_current_cov(0, 0) = 30;
-    m_current_cov(1, 1) = 30;
-    m_current_cov(2, 2) = M_PI/4;
-    m_current_cov(3, 3) = 200;
-    m_current_cov(4, 4) = M_PI/8;
-    // Set flag to initialized
-    m_initialized = true;
+    ukf.initialize( l_blob, r_blob, m_dist_left, m_dist_right );
 }
 
 void ColorTracker::DoInactiveProcessing(double timeStamp)
@@ -227,15 +197,23 @@ void ColorTracker::Rewind(double timeStamp)
 
         if (entry.GetTimeStamp() > timeStamp)
         {
-            m_pos = entry.GetPosition();
-            m_angle = entry.GetOrientation();
             std::stringstream sreader(*(entry.GetString()));
             sreader.precision(20);
-            m_current_state[0] = m_pos.x;
-            m_current_state[1] = m_pos.y;
-            m_current_state[2] = m_angle;
-            sreader >> m_current_state[3];
-            sreader >> m_current_state[4];
+
+            double currState3;
+            sreader >> currState3;
+            double currState4;
+            sreader >> currState4;
+
+            MVec pos;
+            CvPoint2D32f posCv = entry.GetPosition();
+            pos[0] = posCv.x;
+            pos[1] = posCv.y;
+
+            ukf.setCurrentState( pos,
+                                 entry.GetOrientation(),
+                                 currState3,
+                                 currState4 );
             m_history.pop_back();
         }
         else
@@ -360,284 +338,97 @@ bool ColorTracker::find_blob(const cv::Mat & input_image, double hue_ref,
   }
 }
 
-void ColorTracker::predict(double delta_t)
+void ColorTracker::predict( double delta_t )
 {
-  // First, construct the extended state vector and covariance matrix
-  // to extract the sigma-points for prediction
-  XVec10 extended_state;
-  for (int i = 0; i < 5; ++i)
-  {
-      extended_state[i] = m_current_state(i);
-      extended_state[i+5] = 0;
-  }
-  XCov10 extended_covariance = XCov10::zeros();
-  for (int i = 0; i < 5; ++i)
-  {
-      for (int j = 0; j < 5; ++j)
-      {
-          extended_covariance(i, j) = m_current_cov(i, j);
-          extended_covariance(i+5, j+5) = m_proc_noise_cov(i, j);
-      }
-  }
-  // Obtain vector of sigma points and corresponding weights
-  cv::Mat cov_as_mat = (10 + m_kappa) * cv::Mat(extended_covariance);
-  cv::Mat decomposed_cov;
-  assert( cholesky(cov_as_mat, decomposed_cov) &&
-          "Error - you're not giving me a proper covariance matrix");
-  std::vector<double> sigma_weights;
-  std::vector<XVec10> sigma_points;
-  sigma_points.push_back(extended_state);
-  sigma_weights.push_back(m_kappa/(m_kappa + 10));
-  XVec10 current_col;
-  for (int i = 0; i < 10; ++i)
-  {
-      decomposed_cov.col(i).copyTo(current_col);
-      sigma_points.push_back(
-                  extended_state + current_col);
-      sigma_points.push_back(
-                  extended_state - current_col);
-      sigma_weights.push_back(0.5/(m_kappa + 10));
-      sigma_weights.push_back(0.5/(m_kappa + 10));
-  }
-  // Transform sigma points according to the process model
-  std::vector<SVec> transformed_points;
-  SVec new_point;
-  std::vector<XVec10>::iterator it;
-  std::vector<SVec>::iterator jt;
-  for (it = sigma_points.begin(); it != sigma_points.end(); ++it)
-  {
-      new_point[0] = (*it)[0] + delta_t * (*it)[3] * cos((*it)[2]) + (*it)[5];
-      new_point[1] = (*it)[1] + delta_t * (*it)[3] * sin((*it)[2]) + (*it)[6];
-      new_point[2] = (*it)[2] + delta_t * (*it)[4] + (*it)[7];
-      new_point[3] = (*it)[3] + (*it)[8];
-      new_point[4] = (*it)[4] + (*it)[9];
-      transformed_points.push_back(new_point);
-  }
-  // Recover new mean and covariance;
-  SVec weighted_mean;
-  weighted_mean *= 0; // Make sure elements are initialized to 0
-  std::vector<double>::iterator wt;
-  for (jt = transformed_points.begin(), wt = sigma_weights.begin();
-       jt != transformed_points.end(); ++jt, ++wt)
-  {
-      weighted_mean += (*wt) * (*jt);
-  }
-  SCov weighted_cov = SCov::zeros();
-  for (jt = transformed_points.begin(), wt = sigma_weights.begin();
-       jt != transformed_points.end(); ++jt, ++wt)
-  {
-      weighted_cov += (*wt) *
-              (*jt - weighted_mean) * (*jt - weighted_mean).t();
-  }
-  m_current_state = weighted_mean;
-  m_current_cov = weighted_cov;
-  m_pos.x = m_current_state[0];
-  m_pos.y = m_current_state[1];
-  m_angle = m_current_state[2];
-  m_error = cv::trace(m_current_cov);
+  ukf.predict( delta_t );
 }
 
-void ColorTracker::update(MVec measurement, int direction)
+void ColorTracker::update( MVec measurement, int model )
 {
-  // Direction can be -1 for left or 1 for right
-  assert(direction == 1 || direction == -1);
-  // First, construct the extended state vector and covariance matrix
-  // to extract the sigma-points for prediction
-  XVec7 extended_state;
-  for (int i = 0; i < 5; ++i)
-  {
-      extended_state[i] = m_current_state(i);
-  }
-  extended_state[5] = 0;
-  extended_state[6] = 0;
-  XCov7 extended_covariance = XCov7::zeros();
-  for (int i = 0; i < 5; ++i)
-  {
-      for (int j = 0; j < 5; ++j)
-      {
-          extended_covariance(i, j) = m_current_cov(i, j);
-      }
-  }
-  for (int i = 5; i < 7; ++i)
-  {
-    for (int j = 5; j < 7; ++j)
-    {
-      extended_covariance(i, j) = m_meas_noise_cov(i-5, j-5);
-    }
-  }
-  // Obtain vector of sigma points and corresponding weights
-  cv::Mat cov_as_mat = (7 + m_kappa) * cv::Mat(extended_covariance);
-  cv::Mat decomposed_cov;
-  assert( cholesky(cov_as_mat, decomposed_cov) &&
-          "Error - you're not giving me a proper covariance matrix");
-
-  // Obtain predicted measurement by transforming sigma points
-  // with measurement model
-  std::vector<double> sigma_weights;
-  std::vector<XVec7> sigma_points;
-  sigma_points.push_back(extended_state);
-  sigma_weights.push_back(m_kappa/(m_kappa + 7));
-  XVec7 current_col;
-  for (int i = 0; i < 7; ++i)
-  {
-      decomposed_cov.col(i).copyTo(current_col);
-      sigma_points.push_back(
-                  extended_state + current_col);
-      sigma_points.push_back(
-                  extended_state - current_col);
-      sigma_weights.push_back(0.5/(m_kappa + 7));
-      sigma_weights.push_back(0.5/(m_kappa + 7));
-  }
-  // Find weighted average of sigma points
-  XVec7 avg_sigma_points;
-  for (unsigned int i = 0; i < sigma_points.size(); ++i)
-  {
-    avg_sigma_points += sigma_weights[i] * sigma_points[i];
-  }
-  // Transform sigma points according to the measurement model
-  std::vector<MVec> transformed_points;
-  MVec new_point;
-  std::vector<XVec7>::iterator it;
-  std::vector<MVec>::iterator jt;
-  for (it = sigma_points.begin(); it != sigma_points.end(); ++it)
-  {
-    if (direction == -1)
-    {
-      new_point[0] = (*it)[0] - m_dist_left * sin((*it)[2]) + (*it)[5];
-      new_point[1] = (*it)[1] + m_dist_left * cos((*it)[2]) + (*it)[6];
-    }
-    else
-    {
-      new_point[0] = (*it)[0] + m_dist_right * sin((*it)[2]) + (*it)[5];
-      new_point[1] = (*it)[1] - m_dist_right * cos((*it)[2]) + (*it)[6];
-    }
-    transformed_points.push_back(new_point);
-  }
-  // Recover new mean and covariance;
-  MVec predicted_meas;
-  predicted_meas *= 0; // Make sure elements are initialized to 0
-  std::vector<double>::iterator wt;
-  for (jt = transformed_points.begin(), wt = sigma_weights.begin();
-       jt != transformed_points.end(); ++jt, ++wt)
-  {
-      predicted_meas += (*wt) * (*jt);
-  }
-  MCov weighted_cov = MCov::zeros();
-  for (jt = transformed_points.begin(), wt = sigma_weights.begin();
-       jt != transformed_points.end(); ++jt, ++wt)
-  {
-      weighted_cov += (*wt) *
-              (*jt - predicted_meas) * (*jt - predicted_meas).t();
-  }
-  // For the Kalman update, the cross covariance between the state and the
-  // measurement is required - compute this
-  CCov cross_cov = CCov::zeros();
-  for (unsigned int i = 0; i < sigma_points.size(); ++i)
-  {
-    cross_cov += sigma_weights[i] *
-        (sigma_points[i] - avg_sigma_points) *
-        (transformed_points[i] - predicted_meas).t();
-  }
-  CCov kalman_gain = cross_cov * weighted_cov.inv();
-  XVec7 corrected_state = extended_state +
-      kalman_gain * (measurement - predicted_meas);
-  XCov7 corrected_cov = extended_covariance -
-      kalman_gain * weighted_cov * kalman_gain.t();
-  for (int i = 0; i < 5; ++i)
-  {
-    m_current_state[i] = corrected_state[i];
-    for (int j = 0; j < 5; ++j)
-    {
-      m_current_cov(i, j) = corrected_cov(i, j);
-    }
-  }
-  m_pos.x = m_current_state[0];
-  m_pos.y = m_current_state[1];
-  m_angle = m_current_state[2];
-  m_error = cv::trace(m_current_cov);
+  ukf.update( measurement, model, model==-1?m_dist_left:m_dist_right );
 }
 
-void testColorTracker(std::string infn, std::string outfn)
-{
-  std::ifstream inputFile;
-  std::ofstream outputFile;
-  std::stringstream inLine;
-  std::string readLine;
-  std::stringstream outLine;
-  ColorTracker tracker(NULL, NULL, NULL, NULL);
-  // Hack in measurement/process covariances - To calibrate later!
-  tracker.m_proc_noise_cov = 2 * SCov::eye();
-  tracker.m_proc_noise_cov(0, 0) = 4.;
-  tracker.m_proc_noise_cov(1, 1) = 4.;
-  tracker.m_proc_noise_cov(2, 2) = M_PI/40.;
-  tracker.m_proc_noise_cov(3, 3) = 20.;
-  tracker.m_proc_noise_cov(4, 4) = M_PI/80.;
-  tracker.m_meas_noise_cov = 2. * MCov::eye();
-  tracker.m_dist_left = 10;
-  tracker.m_dist_right = 10;
-  inLine.precision(15);
-  outLine.precision(15);
-  inputFile.open(infn);
-  outputFile.open(outfn);
-  double dt, x_l, y_l, x_r, y_r;
-  bool found_l, found_r, initialized;
-  MVec l_blob, r_blob;
-  if (!inputFile.is_open())
-  {
-    std::cout << "Couldn't open input file" << std::endl;
-    exit(1);
-  }
-  if (!outputFile.is_open())
-  {
-    std::cout << "Couldn't open output file" << std::endl;
-    exit(1);
-  }
-  while (std::getline(inputFile, readLine))
-  {
-    inLine.clear();
-    inLine.str(readLine);
-    inLine >> dt >> found_l >> x_l >> y_l >> found_r >> x_r >> y_r;
-    l_blob[0] = x_l; l_blob[1] = y_l;
-    r_blob[0] = x_r; r_blob[1] = y_r;
-    if (!initialized)
-    {
-      if (found_l && found_r)
-      {
-        tracker.initialize(l_blob, r_blob);
-        tracker.m_current_cov(0, 0) = 30.;
-        tracker.m_current_cov(1, 1) = 30.;
-        tracker.m_current_cov(2, 2) = M_PI/4;
-        tracker.m_current_cov(3, 3) = 200.;
-        tracker.m_current_cov(4, 4) = M_PI/8;
-        initialized = true;
-      }
-    }
-    else
-    {
-      tracker.predict(dt);
-      if (found_l)
-      {
-        tracker.update(l_blob, -1);
-      }
-      if (found_r)
-      {
-        tracker.update(r_blob, 1);
-      }
-    }
-    outLine.str("");
-    for (int i = 0; i < 5; ++i)
-    {
-      outLine << tracker.m_current_state[i] << " ";
-    }
-    for (int i = 0; i < 5; ++i)
-    {
-      for (int j = 0; j <= i; ++j)
-      {
-        outLine << tracker.m_current_cov(i, j) << " ";
-      }
-    }
-    outputFile << outLine.str() << std::endl;
-  }
-  inputFile.close();
-  outputFile.close();
-}
+// void testColorTracker(std::string infn, std::string outfn)
+// {
+//   std::ifstream inputFile;
+//   std::ofstream outputFile;
+//   std::stringstream inLine;
+//   std::string readLine;
+//   std::stringstream outLine;
+//   ColorTracker tracker(NULL, NULL, NULL, NULL);
+//   // Hack in measurement/process covariances - To calibrate later!
+//   tracker.m_proc_noise_cov = 2 * SCov::eye();
+//   tracker.m_proc_noise_cov(0, 0) = 4.;
+//   tracker.m_proc_noise_cov(1, 1) = 4.;
+//   tracker.m_proc_noise_cov(2, 2) = M_PI/40.;
+//   tracker.m_proc_noise_cov(3, 3) = 20.;
+//   tracker.m_proc_noise_cov(4, 4) = M_PI/80.;
+//   tracker.m_meas_noise_cov = 2. * MCov::eye();
+//   tracker.m_dist_left = 10;
+//   tracker.m_dist_right = 10;
+//   inLine.precision(15);
+//   outLine.precision(15);
+//   inputFile.open(infn);
+//   outputFile.open(outfn);
+//   double dt, x_l, y_l, x_r, y_r;
+//   bool found_l, found_r, initialized;
+//   MVec l_blob, r_blob;
+//   if (!inputFile.is_open())
+//   {
+//     std::cout << "Couldn't open input file" << std::endl;
+//     exit(1);
+//   }
+//   if (!outputFile.is_open())
+//   {
+//     std::cout << "Couldn't open output file" << std::endl;
+//     exit(1);
+//   }
+//   while (std::getline(inputFile, readLine))
+//   {
+//     inLine.clear();
+//     inLine.str(readLine);
+//     inLine >> dt >> found_l >> x_l >> y_l >> found_r >> x_r >> y_r;
+//     l_blob[0] = x_l; l_blob[1] = y_l;
+//     r_blob[0] = x_r; r_blob[1] = y_r;
+//     if (!initialized)
+//     {
+//       if (found_l && found_r)
+//       {
+//         tracker.initialize(l_blob, r_blob);
+//         tracker.m_current_cov(0, 0) = 30.;
+//         tracker.m_current_cov(1, 1) = 30.;
+//         tracker.m_current_cov(2, 2) = M_PI/4;
+//         tracker.m_current_cov(3, 3) = 200.;
+//         tracker.m_current_cov(4, 4) = M_PI/8;
+//         initialized = true;
+//       }
+//     }
+//     else
+//     {
+//       tracker.predict(dt);
+//       if (found_l)
+//       {
+//         tracker.update(l_blob, -1);
+//       }
+//       if (found_r)
+//       {
+//         tracker.update(r_blob, 1);
+//       }
+//     }
+//     outLine.str("");
+//     for (int i = 0; i < 5; ++i)
+//     {
+//       outLine << tracker.m_current_state[i] << " ";
+//     }
+//     for (int i = 0; i < 5; ++i)
+//     {
+//       for (int j = 0; j <= i; ++j)
+//       {
+//         outLine << tracker.m_current_cov(i, j) << " ";
+//       }
+//     }
+//     outputFile << outLine.str() << std::endl;
+//   }
+//   inputFile.close();
+//   outputFile.close();
+// }

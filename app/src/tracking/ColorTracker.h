@@ -5,16 +5,7 @@
 #define COLORTRACKER_H
 
 #include "RobotTracker.h"
-
-typedef cv::Vec<double, 5> SVec;
-typedef cv::Vec<double, 2> MVec;
-typedef cv::Vec<double, 10> XVec10;
-typedef cv::Vec<double, 7> XVec7;
-typedef cv::Matx<double, 5, 5> SCov;
-typedef cv::Matx<double, 2, 2> MCov;
-typedef cv::Matx<double, 7, 2> CCov;
-typedef cv::Matx<double, 10, 10> XCov10;
-typedef cv::Matx<double, 7, 7> XCov7;
+#include "Ukf.h"
 
 class CameraCalibration;
 class ColorCalibration;
@@ -46,7 +37,7 @@ public:
 
     CvPoint2D32f GetPosition() const
     {
-        return (CvPoint2D32f) m_pos;
+        return ukf.getPosition();
     }
 
     CvPoint2D32f GetGroundPlanePos() const
@@ -57,7 +48,7 @@ public:
 
     float GetHeading() const
     {
-        return m_angle;
+        return ukf.getHeading();
     }
 
     double GetCurrentTime() const
@@ -70,7 +61,7 @@ public:
 
     float GetError() const
     {
-        return m_error;
+        return ukf.getError();
     }
 
     const IplImage * GetCurrentImage() const
@@ -88,7 +79,7 @@ public:
 
     void SetPosition( CvPoint2D32f robotPosition )
     {
-        m_pos = robotPosition;
+        ukf.setPosition( robotPosition );
     }
 
     bool UsesColorImages()
@@ -142,24 +133,16 @@ private:
     void predict(double delta_t);
     // Uses one of two measurement models (one for left measurement,
     // one for right measurement) to correct the predicted position.
-    void update(MVec measurement, int direction);
+    void update(MVec measurement, int model);
 
     bool m_initialized;
-    cv::Point2f m_pos;
-    float m_angle;
-
-    float m_error;
 
     double m_current_timestamp;
 
     double m_dist_left;  // [px]
     double m_dist_right; // [px]
 
-    SVec m_current_state;
-    SCov m_current_cov;
-    SCov m_proc_noise_cov;
-    MCov m_meas_noise_cov;
-    double m_kappa; // Used in the unscented transform
+    Ukf ukf;
 
     cv::Mat m_currImg;
     cv::Mat m_hsvImg;
