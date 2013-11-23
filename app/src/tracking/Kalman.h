@@ -6,24 +6,28 @@
 
 #include <opencv2/core/core.hpp>
 
-#define X_LEN 5
+#define M_LEN 3 // length of measurement vector
+#define X_LEN 5 // length of state vector
 
 class Kalman
 {
 public:
 
     typedef cv::Vec<double,  X_LEN> SVec;
-    typedef cv::Vec<double,  3> MVec;
-    typedef cv::Vec<double,  2*X_LEN> SVecExt;
+    typedef cv::Vec<double,  M_LEN> MVec;
+    typedef cv::Vec<double,  X_LEN+M_LEN> SVecExtUpdate;
+    typedef cv::Vec<double,  2*X_LEN> SVecExtPrediction;
     typedef cv::Matx<double, X_LEN, X_LEN> SCov;
-    typedef cv::Matx<double, 3, 3> MCov3x3;
-    typedef cv::Matx<double, 2*X_LEN, 3> CCov;
-    typedef cv::Matx<double, 2*X_LEN, 2*X_LEN> CovExt;
+    typedef cv::Matx<double, M_LEN, M_LEN> MCov;
+    typedef cv::Matx<double, X_LEN+M_LEN, M_LEN> CCov;
+    typedef cv::Matx<double, X_LEN+M_LEN, X_LEN+M_LEN> CovExtUpdate;
+    typedef cv::Matx<double, 2*X_LEN, 2*X_LEN> CovExtPrediction;
 
     Kalman();
     ~Kalman();
 
-    void initialize ( Kalman::MVec measurement );
+    void init ( Kalman::MVec measurement );
+    void deInit ();
 
     /**
      * Uses process model to predict the robot's next position.
@@ -44,11 +48,12 @@ public:
      */
     void update( const Kalman::MVec measurement );
 
-    bool         isInitialized   () const;
+    bool         isInit          () const;
     SVec         getCurrentState () const;
     bool         getError        () const;
     float        getHeading      () const;
     CvPoint3D32f getPosition     () const;
+    void         setPosition     ( CvPoint2D32f pos );
     void         setPosition     ( CvPoint3D32f pos );
     void         setCurrentState ( Kalman::MVec pos, double linearSpeed, double angularSpeed );
 
@@ -63,7 +68,7 @@ private:
 
     float m_error;
 
-    bool m_initialized;
+    bool m_init;
 
     /*
       State vector is:
@@ -77,7 +82,7 @@ private:
 
     Kalman::SCov m_current_cov;
     Kalman::SCov m_proc_noise_cov;
-    Kalman::MCov3x3 m_meas_noise_cov;
+    Kalman::MCov m_meas_noise_cov;
     double m_kappa; // Used in the unscented transform
 
     bool cholesky (const cv::Mat & inputmat, cv::Mat & output);

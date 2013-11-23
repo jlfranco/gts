@@ -20,6 +20,7 @@
 #define KLTTRACKER_H
 
 #include "RobotTracker.h"
+#include "Kalman.h"
 
 class CameraCalibration;
 class RobotMetrics;
@@ -87,6 +88,15 @@ public:
     void SetPosition( CvPoint2D32f robotPosition )
     {
         fprintf( stderr, "KltTracker::SetPosition\n");
+
+        if ( m_useKalman )
+        {
+            Kalman::MVec robPos;
+            robPos[0] = robotPosition.x;
+            robPos[1] = robotPosition.y;
+            robPos[2] = ComputeHeading( robotPosition );
+            m_kalman.init( robPos );
+        }
 
         m_pos = robotPosition;
     }
@@ -167,6 +177,9 @@ private:
     IplImage* m_diff; // Difference image for motion detection
     IplImage* m_filtered; // filtered motion image
 
+    bool m_useKalman;
+    Kalman m_kalman;
+
     // History stores the position, orientation, tracker error and time stamp.
     TrackHistory::TrackLog m_history;
 
@@ -184,7 +197,7 @@ private:
     void SwapPyramids();
 
     void PredictTargetAppearance( float angleInRadians, float offsetAngleDegrees );
-    bool TrackStage2( CvPoint2D32f initialPosition, bool flipCorrect, bool init );
+    bool TrackStage2( CvPoint2D32f initialPosition, bool flipCorrect, bool init, double timeMs );
 
     void InitialiseRecoverySystem();
 };

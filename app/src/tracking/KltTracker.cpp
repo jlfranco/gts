@@ -62,6 +62,7 @@ KltTracker::KltTracker( const CameraCalibration* cal,
     m_avg           ( 0 ),
     m_diff          ( 0 ),
     m_filtered      ( 0 ),
+    m_useKalman     ( true ),
     m_history       (),
     m_cal           ( cal ),
     m_metrics       ( metrics )
@@ -217,7 +218,7 @@ void KltTracker::Activate()
 
     m_status = TRACKER_ACTIVE;
 
-    TrackStage2( m_pos, false, true );
+    TrackStage2( m_pos, false, true, 0. );
 }
 
 /**
@@ -271,7 +272,7 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                             cvTermCriteria( CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.03 ),
                             kltFlags );
 
-    if ( found && TrackStage2( newPos, flipCorrect, false ) )
+    if ( found && TrackStage2( newPos, flipCorrect, false, timestampInMillisecs ) )
     {
         float ncc = GetError();
 
@@ -342,14 +343,47 @@ void KltTracker::Rewind( double timeStamp )
  use it to refine the tracking. We use the tracking result of the first stage (newPos)
  to initialise 2nd stage. This helps the tracker avoid local minima.
  **/
-bool KltTracker::TrackStage2( CvPoint2D32f newPos, bool flipCorrect, bool init )
+bool KltTracker::TrackStage2( CvPoint2D32f newPos, bool flipCorrect, bool init, double timeMs )
 {
     char found1 = 0;
     char found2 = 0;
+
+    CvPoint3D32f currPos;
+    if( init )
+    {
+        if( m_useKalman )
+        {
+            m_kalman.deInit();
+        }
+    }
+    else
+    {
+        if( m_useKalman )
+        {
+            Kalman::MVec measurement;
+            measurement[0] = newPos.x;
+            measurement[1] = newPos.y;
+            measurement[2] = ComputeHeading( newPos );
+            if ( !m_kalman.isInit() )
+            {
+                m_kalman.init( measurement );
+            }
+            else
+            {
+                m_kalman.predict( timeMs );
+                m_kalman.update ( measurement );
+            }
+
+            currPos  = m_kalman.getPosition();
+            newPos.x = currPos.x;
+            newPos.y = currPos.y;
+        }
+    }
+
     m_pos = newPos;
 
     float oldAngle = m_angle;
-    float newAngle = ComputeHeading( m_pos );
+    float newAngle = (m_useKalman&&!init)?currPos.z:ComputeHeading( m_pos );
 
     // Use heading to predict appearance
     PredictTargetAppearance( newAngle, 0 );

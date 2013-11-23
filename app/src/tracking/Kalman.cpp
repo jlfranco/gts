@@ -2,11 +2,12 @@
  */
 
 #include "Kalman.h"
+#include <iostream>
 
 Kalman::Kalman() :
     m_pos               ( cv::Point3f(0, 0, 0) ),
     m_error             ( 0 ),
-    m_initialized       ( false ),
+    m_init       ( false ),
     m_kappa             ( 1 )
 {
     m_proc_noise_cov = 2 * SCov::eye();
@@ -15,15 +16,16 @@ Kalman::Kalman() :
     m_proc_noise_cov(2, 2) = M_PI/40.;
     m_proc_noise_cov(3, 3) = 20.;
     m_proc_noise_cov(4, 4) = M_PI/80.;
-    m_meas_noise_cov       = 2. * MCov3x3::eye();
+    m_meas_noise_cov       = 2. * MCov::eye();
 }
 
 Kalman::~Kalman()
 {
 }
 
-void Kalman::initialize( MVec measurement )
+void Kalman::init( MVec measurement )
 {
+    fprintf( stderr, "Kalman::init\n");
     m_pos.x = measurement[0];
     m_pos.y = measurement[1];
     m_pos.z = measurement[2]; // angle
@@ -37,10 +39,16 @@ void Kalman::initialize( MVec measurement )
     m_current_cov(0, 0) = 30;
     m_current_cov(1, 1) = 30;
     m_current_cov(2, 2) = M_PI/4;
-    m_current_cov(3, 3) = 200;
-    m_current_cov(4, 4) = 200; //TODO verify
+    m_current_cov(3, 3) = 20;
+    m_current_cov(4, 4) = M_PI/4; //TODO verify
 
-    m_initialized = true;
+    m_init = true;
+}
+
+void Kalman::deInit()
+{
+    fprintf( stderr, "Kalman::deInit\n");
+    m_init = false;
 }
 
 bool Kalman::cholesky (const cv::Mat & inputmat, cv::Mat & output)
@@ -77,15 +85,16 @@ bool Kalman::cholesky (const cv::Mat & inputmat, cv::Mat & output)
 
 void Kalman::predict(double delta_t)
 {
+  fprintf( stderr, "Kalman::predict\n");
   // First, construct the extended state vector and covariance matrix
   // to extract the sigma-points for prediction
-  SVecExt extended_state;
+  SVecExtPrediction extended_state;
   for (int i = 0; i < X_LEN; ++i)
   {
       extended_state[i] = m_current_state(i);
       extended_state[i+X_LEN] = 0;
   }
-  CovExt extended_covariance = CovExt::zeros();
+  CovExtPrediction extended_covariance = CovExtPrediction::zeros();
   for (int i = 0; i < X_LEN; ++i)
   {
       for (int j = 0; j < X_LEN; ++j)
@@ -100,10 +109,10 @@ void Kalman::predict(double delta_t)
   assert( cholesky(cov_as_mat, decomposed_cov) &&
           "Error - you're not giving me a proper covariance matrix");
   std::vector<double> sigma_weights;
-  std::vector<SVecExt> sigma_points;
+  std::vector<SVecExtPrediction> sigma_points;
   sigma_points.push_back(extended_state);
   sigma_weights.push_back(m_kappa/(m_kappa + 10));
-  SVecExt current_col;
+  SVecExtPrediction current_col;
   for (int i = 0; i < 2*X_LEN; ++i)
   {
       decomposed_cov.col(i).copyTo(current_col);
@@ -117,7 +126,7 @@ void Kalman::predict(double delta_t)
   // Transform sigma points according to the process model
   std::vector<SVec> transformed_points;
   SVec new_point;
-  std::vector<SVecExt>::iterator it;
+  std::vector<SVecExtPrediction>::iterator it;
   std::vector<SVec>::iterator jt;
   for (it = sigma_points.begin(); it != sigma_points.end(); ++it)
   {
@@ -130,7 +139,7 @@ void Kalman::predict(double delta_t)
   }
   // Recover new mean and covariance;
   SVec weighted_mean;
-  weighted_mean *= 0; // Make sure elements are initialized to 0
+  weighted_mean *= 0; // Make sure elements are initd to 0
   std::vector<double>::iterator wt;
   for (jt = transformed_points.begin(), wt = sigma_weights.begin();
        jt != transformed_points.end(); ++jt, ++wt)
@@ -154,16 +163,17 @@ void Kalman::predict(double delta_t)
 
 void Kalman::update( const MVec measurement )
 {
+  fprintf( stderr, "Kalman::update\n");
   // First, construct the extended state vector and covariance matrix
   // to extract the sigma-points for prediction
-  SVecExt extended_state;
+  SVecExtUpdate extended_state;
   for (int i = 0; i < X_LEN; ++i)
   {
       extended_state[i] = m_current_state(i);
   }
-  for (int i = X_LEN; i < 2*X_LEN; i++)
+  for (int i = X_LEN; i < X_LEN+M_LEN; i++)
       extended_state[i] = 0;
-  CovExt extended_covariance = CovExt::zeros();
+  CovExtUpdate extended_covariance = CovExtUpdate::zeros();
   for (int i = 0; i < X_LEN; ++i)
   {
       for (int j = 0; j < X_LEN; ++j)
@@ -171,15 +181,15 @@ void Kalman::update( const MVec measurement )
           extended_covariance(i, j) = m_current_cov(i, j);
       }
   }
-  for (int i = X_LEN; i < 2*X_LEN; ++i)
+  for (int i = X_LEN; i < X_LEN+M_LEN; ++i)
   {
-    for (int j = X_LEN; j < 2*X_LEN; ++j)
+    for (int j = X_LEN; j < X_LEN+M_LEN; ++j)
     {
       extended_covariance(i, j) = m_meas_noise_cov(i-X_LEN, j-X_LEN);
     }
   }
   // Obtain vector of sigma points and corresponding weights
-  cv::Mat cov_as_mat = (7 + m_kappa) * cv::Mat(extended_covariance);
+  cv::Mat cov_as_mat = (X_LEN + M_LEN + m_kappa) * cv::Mat(extended_covariance);
   cv::Mat decomposed_cov;
   assert( cholesky(cov_as_mat, decomposed_cov) &&
           "Error - you're not giving me a proper covariance matrix");
@@ -187,22 +197,22 @@ void Kalman::update( const MVec measurement )
   // Obtain predicted measurement by transforming sigma points
   // with measurement model
   std::vector<double> sigma_weights;
-  std::vector<SVecExt> sigma_points;
+  std::vector<SVecExtUpdate> sigma_points;
   sigma_points.push_back(extended_state);
-  sigma_weights.push_back(m_kappa/(m_kappa + 7));
-  SVecExt current_col;
-  for (int i = 0; i < 2*X_LEN; ++i)
+  sigma_weights.push_back(m_kappa/(m_kappa + X_LEN + M_LEN ));
+  SVecExtUpdate current_col;
+  for (int i = 0; i < X_LEN + M_LEN; ++i)
   {
       decomposed_cov.col(i).copyTo(current_col);
       sigma_points.push_back(
                   extended_state + current_col);
       sigma_points.push_back(
                   extended_state - current_col);
-      sigma_weights.push_back(0.5/(m_kappa + 7));
-      sigma_weights.push_back(0.5/(m_kappa + 7));
+      sigma_weights.push_back(0.5/(m_kappa + X_LEN + M_LEN));
+      sigma_weights.push_back(0.5/(m_kappa + X_LEN + M_LEN));
   }
   // Find weighted average of sigma points
-  SVecExt avg_sigma_points;
+  SVecExtUpdate avg_sigma_points;
   for (unsigned int i = 0; i < sigma_points.size(); ++i)
   {
     avg_sigma_points += sigma_weights[i] * sigma_points[i];
@@ -210,7 +220,7 @@ void Kalman::update( const MVec measurement )
   // Transform sigma points according to the measurement model
   std::vector<MVec> transformed_points;
   MVec new_point;
-  std::vector<SVecExt>::iterator it;
+  std::vector<SVecExtUpdate>::iterator it;
   std::vector<MVec>::iterator jt;
   for (it = sigma_points.begin(); it != sigma_points.end(); ++it)
   {
@@ -221,14 +231,14 @@ void Kalman::update( const MVec measurement )
   }
   // Recover new mean and covariance;
   MVec predicted_meas;
-  predicted_meas *= 0; // Make sure elements are initialized to 0
+  predicted_meas *= 0; // Make sure elements are initd to 0
   std::vector<double>::iterator wt;
   for (jt = transformed_points.begin(), wt = sigma_weights.begin();
        jt != transformed_points.end(); ++jt, ++wt)
   {
       predicted_meas += (*wt) * (*jt);
   }
-  MCov3x3 weighted_cov = MCov3x3::zeros();
+  MCov weighted_cov = MCov::zeros();
   for (jt = transformed_points.begin(), wt = sigma_weights.begin();
        jt != transformed_points.end(); ++jt, ++wt)
   {
@@ -245,9 +255,9 @@ void Kalman::update( const MVec measurement )
         (transformed_points[i] - predicted_meas).t();
   }
   CCov kalman_gain = cross_cov * weighted_cov.inv();
-  SVecExt corrected_state = extended_state +
+  SVecExtUpdate corrected_state = extended_state +
       kalman_gain * (measurement - predicted_meas);
-  CovExt corrected_cov = extended_covariance -
+  CovExtUpdate corrected_cov = extended_covariance -
       kalman_gain * weighted_cov * kalman_gain.t();
   for (int i = 0; i < X_LEN; ++i)
   {
@@ -288,6 +298,12 @@ void Kalman::setPosition( CvPoint3D32f pos )
     m_pos = pos;
 }
 
+void Kalman::setPosition( CvPoint2D32f pos )
+{
+    m_pos.x = pos.x;
+    m_pos.y = pos.y;
+}
+
 void Kalman::setCurrentState( MVec pos, double linearSpeed, double angularSpeed )
 {
     m_pos.x = pos[0];
@@ -301,7 +317,7 @@ void Kalman::setCurrentState( MVec pos, double linearSpeed, double angularSpeed 
     m_current_state[4] = angularSpeed;
 }
 
-bool Kalman::isInitialized() const
+bool Kalman::isInit() const
 {
-    return m_initialized;
+    return m_init;
 }
