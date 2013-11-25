@@ -2,6 +2,9 @@
  */
 
 #include "Kalman.h"
+
+#include "Logging.h"
+
 #include <iostream>
 
 Kalman::Kalman() :
@@ -83,7 +86,7 @@ bool Kalman::cholesky (const cv::Mat & inputmat, cv::Mat & output)
     return true; // Matrix is positive definite
 }
 
-void Kalman::predict(double delta_t)
+bool Kalman::predict(double delta_t)
 {
   fprintf( stderr, "Kalman::predict\n");
   // First, construct the extended state vector and covariance matrix
@@ -106,8 +109,12 @@ void Kalman::predict(double delta_t)
   // Obtain vector of sigma points and corresponding weights
   cv::Mat cov_as_mat = (10 + m_kappa) * cv::Mat(extended_covariance);
   cv::Mat decomposed_cov;
-  assert( cholesky(cov_as_mat, decomposed_cov) &&
-          "Error - you're not giving me a proper covariance matrix");
+  if ( !cholesky(cov_as_mat, decomposed_cov) )
+  {
+      LOG_ERROR("You're not giving me a proper covariance matrix");
+      m_init = false;
+      return false;
+  }
   std::vector<double> sigma_weights;
   std::vector<SVecExtPrediction> sigma_points;
   sigma_points.push_back(extended_state);
@@ -159,9 +166,10 @@ void Kalman::predict(double delta_t)
   m_pos.y = m_current_state[1];
   m_pos.z = m_current_state[2];
   m_error = cv::trace(m_current_cov);
+  return true;
 }
 
-void Kalman::update( const MVec measurement )
+bool Kalman::update( const MVec measurement )
 {
   fprintf( stderr, "Kalman::update\n");
   // First, construct the extended state vector and covariance matrix
@@ -191,8 +199,12 @@ void Kalman::update( const MVec measurement )
   // Obtain vector of sigma points and corresponding weights
   cv::Mat cov_as_mat = (X_LEN + M_LEN + m_kappa) * cv::Mat(extended_covariance);
   cv::Mat decomposed_cov;
-  assert( cholesky(cov_as_mat, decomposed_cov) &&
-          "Error - you're not giving me a proper covariance matrix");
+  if ( !cholesky(cov_as_mat, decomposed_cov) )
+  {
+      LOG_ERROR("You're not giving me a proper covariance matrix");
+      m_init = false;
+      return false;
+  }
 
   // Obtain predicted measurement by transforming sigma points
   // with measurement model
@@ -271,6 +283,7 @@ void Kalman::update( const MVec measurement )
   m_pos.y = m_current_state[1];
   m_pos.z = m_current_state[2];
   m_error = cv::trace(m_current_cov);
+  return true;
 }
 
 Kalman::SVec Kalman::getCurrentState() const

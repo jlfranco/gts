@@ -218,7 +218,7 @@ void KltTracker::Activate()
 
     m_status = TRACKER_ACTIVE;
 
-    TrackStage2( m_pos, false, true, 0. );
+    TrackStage2( m_pos, false, true );
 }
 
 /**
@@ -244,6 +244,7 @@ void KltTracker::DoInactiveProcessing( double timeStamp )
 bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init )
 {
     char found = 0;
+    bool found2 = false;
     CvPoint2D32f newPos;
 
     // First we do simple frame-to-frame KLT track.
@@ -272,50 +273,91 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                             cvTermCriteria( CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.03 ),
                             kltFlags );
 
-    if ( found && TrackStage2( newPos, flipCorrect, false, timestampInMillisecs ) )
+    if ( found )
     {
-        float ncc = GetError();
-
-        if ( ncc < m_nccThresh )
+        found2 = TrackStage2( newPos, flipCorrect, false );
+        if( found2 )
         {
-            if ( !IsLost() )
-            {
-                LOG_WARN("Lost.");
+            float ncc = GetError();
 
-                LOG_INFO(QObject::tr("NCC value: %1 (thresh %2).").arg(ncc)
-                                                                  .arg(m_nccThresh));
-                SetJustLost(); // tracker has transitioned into lost state
+            if ( ncc < m_nccThresh )
+            {
+                if ( !IsLost() )
+                {
+                    LOG_WARN("Lost.");
+
+                    LOG_INFO(QObject::tr("NCC value: %1 (thresh %2).").arg(ncc)
+                             .arg(m_nccThresh));
+                    SetJustLost(); // tracker has transitioned into lost state
+                }
+                else
+                {
+                    LOG_WARN("Still lost.");
+
+                    SetLost(); // ttacker is still lost
+                }
+            }
+
+            // Read the warp gradient magnitude at the tracked position to store in TrackEntry for later use.
+            const CvMat* wgi = m_cal->GetWarpGradientImage();
+            int x = static_cast<int>( m_pos.x + .5f );
+            int y = static_cast<int>( m_pos.y + .5f );
+            float warpGradient = TrackEntry::unknownWgm;
+            if ( ( x < wgi->cols ) && ( y < wgi->rows ) ) ///@todo Need to investigate why we sometimes access beyond the edge of wgi image.
+            {
+                warpGradient = CV_MAT_ELEM( *wgi, float, y, x );
+            }
+
+            // If we found a good track and the 2nd stage was a success then store the result
+            const float error = GetError();
+
+            assert( error >= -1.0 );
+            assert( error <= 1.0 );
+
+            m_history.emplace_back( TrackEntry( GetPosition(), GetHeading(), GetError(), timestampInMillisecs, warpGradient ) );
+        }
+    }
+
+    bool kalmanOk = true;
+    // kalman
+    if( m_useKalman )
+    {
+        if( init )
+        {
+            m_kalman.deInit();
+        }
+        else
+        {
+            Kalman::MVec measurement;
+            measurement[0] = m_pos.x;
+            measurement[1] = m_pos.y;
+            measurement[2] = m_angle;
+            if ( !m_kalman.isInit() )
+            {
+                m_kalman.init( measurement );
             }
             else
             {
-                LOG_WARN("Still lost.");
-
-                SetLost(); // ttacker is still lost
+                if( found )
+                {
+                    kalmanOk = m_kalman.predict( timestampInMillisecs );
+                }
+                if( kalmanOk && found2 )
+                {
+                    kalmanOk = m_kalman.update ( measurement );
+                }
+                if ( kalmanOk && ( found || found2 ) )
+                {
+                    CvPoint3D32f currPos  = m_kalman.getPosition();
+                    m_pos.x = currPos.x;
+                    m_pos.y = currPos.y;
+                    m_angle = currPos.z;
+                }
             }
         }
-
-        // Read the warp gradient magnitude at the tracked position to store in TrackEntry for later use.
-        const CvMat* wgi = m_cal->GetWarpGradientImage();
-        int x = static_cast<int>( m_pos.x + .5f );
-        int y = static_cast<int>( m_pos.y + .5f );
-        float warpGradient = TrackEntry::unknownWgm;
-        if ( ( x < wgi->cols ) && ( y < wgi->rows ) ) ///@todo Need to investigate why we sometimes access beyond the edge of wgi image.
-        {
-            warpGradient = CV_MAT_ELEM( *wgi, float, y, x );
-        }
-
-        // If we found a good track and the 2nd stage was a success then store the result
-        const float error = GetError();
-        
-	assert( error >= -1.0 );
-        assert( error <= 1.0 );
-
-        m_history.emplace_back( TrackEntry( GetPosition(), GetHeading(), GetError(), timestampInMillisecs, warpGradient ) );
-
-        return true;
     }
 
-    return false;
+    return found && found2 && kalmanOk;
 }
 
 void KltTracker::Rewind( double timeStamp )
@@ -343,47 +385,15 @@ void KltTracker::Rewind( double timeStamp )
  use it to refine the tracking. We use the tracking result of the first stage (newPos)
  to initialise 2nd stage. This helps the tracker avoid local minima.
  **/
-bool KltTracker::TrackStage2( CvPoint2D32f newPos, bool flipCorrect, bool init, double timeMs )
+bool KltTracker::TrackStage2( CvPoint2D32f newPos, bool flipCorrect, bool init )
 {
     char found1 = 0;
     char found2 = 0;
 
-    CvPoint3D32f currPos;
-    if( init )
-    {
-        if( m_useKalman )
-        {
-            m_kalman.deInit();
-        }
-    }
-    else
-    {
-        if( m_useKalman )
-        {
-            Kalman::MVec measurement;
-            measurement[0] = newPos.x;
-            measurement[1] = newPos.y;
-            measurement[2] = ComputeHeading( newPos );
-            if ( !m_kalman.isInit() )
-            {
-                m_kalman.init( measurement );
-            }
-            else
-            {
-                m_kalman.predict( timeMs );
-                m_kalman.update ( measurement );
-            }
-
-            currPos  = m_kalman.getPosition();
-            newPos.x = currPos.x;
-            newPos.y = currPos.y;
-        }
-    }
-
     m_pos = newPos;
 
     float oldAngle = m_angle;
-    float newAngle = (m_useKalman&&!init)?currPos.z:ComputeHeading( m_pos );
+    float newAngle = ComputeHeading( m_pos );
 
     // Use heading to predict appearance
     PredictTargetAppearance( newAngle, 0 );

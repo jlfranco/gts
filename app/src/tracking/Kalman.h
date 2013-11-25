@@ -36,7 +36,7 @@ public:
      *
      * @param delta_t Time since previous sample [ms].
      */
-    void predict( double delta_t );
+    bool predict( double delta_t );
 
     /**
      * Uses one of three measurement models (right, left or center) to
@@ -46,7 +46,7 @@ public:
      * @param model The measurement model to be used.
      * @param val The value for the given model.
      */
-    void update( const Kalman::MVec measurement );
+    bool update( const Kalman::MVec measurement );
 
     bool         isInit          () const;
     SVec         getCurrentState () const;
