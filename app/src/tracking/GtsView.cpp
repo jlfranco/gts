@@ -581,6 +581,10 @@ void GtsView::StepTracker( bool forward, CoverageSystem* coverage )
                 cvReleaseImage( &m_imgWarpColor[m_imgColIndex] );
             }
         }
+        else
+        {
+            m_tracker->SetCurrentImage( m_imgWarp[m_imgIndex] );
+        }
 
         // Perform motion detection so
         // that recovery is possible.
