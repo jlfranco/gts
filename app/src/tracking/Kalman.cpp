@@ -8,18 +8,19 @@
 #include <iostream>
 
 Kalman::Kalman() :
-    m_pos               ( cv::Point3f(0, 0, 0) ),
-    m_error             ( 0 ),
+    m_pos        ( cv::Point3f(0, 0, 0) ),
+    m_error      ( 0 ),
     m_init       ( false ),
-    m_kappa             ( 1 )
+    m_kappa      ( 1 )
 {
-    m_proc_noise_cov = 2 * SCov::eye();
+    m_proc_noise_cov = SCov::eye();
     m_proc_noise_cov(0, 0) = 4.;
     m_proc_noise_cov(1, 1) = 4.;
     m_proc_noise_cov(2, 2) = M_PI/40.;
     m_proc_noise_cov(3, 3) = 20.;
     m_proc_noise_cov(4, 4) = M_PI/80.;
     m_meas_noise_cov       = 2. * MCov::eye();
+    m_meas_noise_cov(2,2)  = 20.;
 }
 
 Kalman::~Kalman()
@@ -42,10 +43,17 @@ void Kalman::init( MVec measurement )
     m_current_cov(0, 0) = 30;
     m_current_cov(1, 1) = 30;
     m_current_cov(2, 2) = M_PI/4;
-    m_current_cov(3, 3) = 20;
+    m_current_cov(3, 3) = 200;
     m_current_cov(4, 4) = M_PI/4; //TODO verify
 
     m_init = true;
+}
+
+void Kalman::init( MVec measurement, double timestampMs )
+{
+    m_timestampMs = timestampMs;
+
+    init( measurement );
 }
 
 void Kalman::deInit()
@@ -86,9 +94,13 @@ bool Kalman::cholesky (const cv::Mat & inputmat, cv::Mat & output)
     return true; // Matrix is positive definite
 }
 
-bool Kalman::predict(double delta_t)
+bool Kalman::predict( double timestampMs )
 {
   fprintf( stderr, "Kalman::predict\n");
+
+  double delta_t = timestampMs - m_timestampMs;
+  m_timestampMs = timestampMs;
+
   // First, construct the extended state vector and covariance matrix
   // to extract the sigma-points for prediction
   SVecExtPrediction extended_state;

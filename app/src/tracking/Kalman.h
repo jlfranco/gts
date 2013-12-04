@@ -27,6 +27,7 @@ public:
     ~Kalman();
 
     void init ( Kalman::MVec measurement );
+    void init ( Kalman::MVec measurement, double timestampMs );
     void deInit ();
 
     /**
@@ -79,6 +80,8 @@ private:
         angular speed [degrees/s]
      */
     Kalman::SVec m_current_state;
+
+    double m_timestampMs;
 
     Kalman::SCov m_current_cov;
     Kalman::SCov m_proc_noise_cov;

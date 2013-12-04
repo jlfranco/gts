@@ -28,6 +28,7 @@
 #include "MathsConstants.h"
 
 #include "Logging.h"
+#include <iostream>
 
 #include <opencv/cxcore.h>
 #include <opencv/highgui.h>
@@ -233,6 +234,7 @@ void KltTracker::DoInactiveProcessing( double timeStamp )
     }
 }
 
+#define KALMAN_LIMIT 5
 /**
  Run an interation of the tracker (tracks from previous frame to current frame).
  On each new frame, be sure to call SetCurrentImage() before calling Track().
@@ -245,7 +247,9 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
 {
     char found = 0;
     bool found2 = false;
+    bool kltGaveUp = false;
     CvPoint2D32f newPos;
+    static int err = 0;
 
     // First we do simple frame-to-frame KLT track.
     AllocatePyramids();
@@ -279,9 +283,16 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
         if( found2 )
         {
             float ncc = GetError();
-
-            if ( ncc < m_nccThresh )
+            kltGaveUp = ncc < m_nccThresh;
+            if ( !kltGaveUp && err > 0)
             {
+                LOG_INFO("klt back, restarting kalman error count.");
+                err = 0;
+            }
+
+            if ( kltGaveUp && (!m_useKalman || err > KALMAN_LIMIT) )
+            {
+                err = 0;
                 if ( !IsLost() )
                 {
                     LOG_WARN("Lost.");
@@ -318,7 +329,7 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
         }
     }
 
-    bool kalmanOk = true;
+    bool kalmanOk = false;
     // kalman
     if( m_useKalman )
     {
@@ -329,35 +340,39 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
         else
         {
             Kalman::MVec measurement;
-            measurement[0] = m_pos.x;
-            measurement[1] = m_pos.y;
-            measurement[2] = m_angle;
+            CvPoint2D32f pos = GetPosition();
+            measurement[0] = pos.x;
+            measurement[1] = pos.y;
+            measurement[2] = (double) GetHeading();
             if ( !m_kalman.isInit() )
             {
-                m_kalman.init( measurement );
+                m_kalman.init( measurement, timestampInMillisecs );
             }
             else
             {
-                if( found )
-                {
-                    kalmanOk = m_kalman.predict( timestampInMillisecs );
-                }
-                if( kalmanOk && found2 )
+                kalmanOk = m_kalman.predict( timestampInMillisecs );
+                if( kalmanOk && found && found2 )
                 {
                     kalmanOk = m_kalman.update ( measurement );
                 }
-                if ( kalmanOk && ( found || found2 ) )
+                CvPoint3D32f currPos  = m_kalman.getPosition();
+                if ( kalmanOk )
                 {
-                    CvPoint3D32f currPos  = m_kalman.getPosition();
                     m_pos.x = currPos.x;
                     m_pos.y = currPos.y;
                     m_angle = currPos.z;
+                }
+                std::cout << "err:" << err << std::endl;
+                if ( kltGaveUp && ( err++ >= KALMAN_LIMIT ) )
+                {
+                    LOG_WARN("Kalman giving up");
+                    kalmanOk = false;
                 }
             }
         }
     }
 
-    return found && found2 && kalmanOk;
+    return found || found2;
 }
 
 void KltTracker::Rewind( double timeStamp )
