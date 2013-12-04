@@ -51,7 +51,7 @@ public:
 
     bool         isInit          () const;
     SVec         getCurrentState () const;
-    bool         getError        () const;
+    float        getError        () const;
     float        getHeading      () const;
     CvPoint3D32f getPosition     () const;
     void         setPosition     ( CvPoint2D32f pos );

@@ -303,7 +303,7 @@ Kalman::SVec Kalman::getCurrentState() const
     return m_current_state;
 }
 
-bool Kalman::getError() const
+float Kalman::getError() const
 {
     return m_error;
 }
