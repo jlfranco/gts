@@ -13,14 +13,15 @@ Kalman::Kalman() :
     m_init       ( false ),
     m_kappa      ( 1 )
 {
+    // confidence in our prediction
     m_proc_noise_cov = SCov::eye();
-    m_proc_noise_cov(0, 0) = 4.;
-    m_proc_noise_cov(1, 1) = 4.;
+    m_proc_noise_cov(0, 0) = 1.5; // pixels
+    m_proc_noise_cov(1, 1) = 1.5; // pixels
     m_proc_noise_cov(2, 2) = M_PI/40.;
-    m_proc_noise_cov(3, 3) = 20.;
+    m_proc_noise_cov(3, 3) = 4.;
     m_proc_noise_cov(4, 4) = M_PI/80.;
-    m_meas_noise_cov       = 2. * MCov::eye();
-    m_meas_noise_cov(2,2)  = 20.;
+    m_meas_noise_cov       = .5 * MCov::eye();
+    //    m_meas_noise_cov(2,2)  = 20.;
 }
 
 Kalman::~Kalman()
@@ -40,11 +41,11 @@ void Kalman::init( MVec measurement )
     m_current_state[4] = 0;
 
     m_current_cov = SCov::zeros();
-    m_current_cov(0, 0) = 30;
-    m_current_cov(1, 1) = 30;
-    m_current_cov(2, 2) = M_PI/4;
-    m_current_cov(3, 3) = 200;
-    m_current_cov(4, 4) = M_PI/4; //TODO verify
+    m_current_cov(0, 0) = 1.5f;
+    m_current_cov(1, 1) = 1.5f;
+    m_current_cov(2, 2) = M_PI/16.;
+    m_current_cov(3, 3) = 20.;
+    m_current_cov(4, 4) = M_PI/4.; //TODO verify
 
     m_init = true;
 }
