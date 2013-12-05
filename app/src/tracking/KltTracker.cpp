@@ -234,7 +234,7 @@ void KltTracker::DoInactiveProcessing( double timeStamp )
     }
 }
 
-#define KALMAN_LIMIT 5
+#define KALMAN_LIMIT 15
 /**
  Run an interation of the tracker (tracks from previous frame to current frame).
  On each new frame, be sure to call SetCurrentImage() before calling Track().
@@ -282,9 +282,18 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
         found2 = TrackStage2( newPos, flipCorrect, false );
         if( found2 )
         {
+            double tmpH = GetHeading();
+            std::cout     <<
+                "x:"      <<
+                newPos.x  <<
+                "\ty:"    <<
+                newPos.y  <<
+                "\tang:"  <<
+                tmpH      <<
+                std::endl;
             float ncc = GetError();
             kltGaveUp = ncc < m_nccThresh;
-            if ( !kltGaveUp && err > 0)
+            if ( !kltGaveUp && err > 0 )
             {
                 LOG_INFO("klt back, restarting kalman error count.");
                 err = 0;
@@ -339,6 +348,7 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
         }
         else
         {
+            std::cout << "m_error:" << m_kalman.getError() << std::endl;
             Kalman::MVec measurement;
             CvPoint2D32f pos = GetPosition();
             measurement[0] = pos.x;
@@ -351,22 +361,51 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
             else
             {
                 kalmanOk = m_kalman.predict( timestampInMillisecs );
+                bool recovered = false;
+                if ( kltGaveUp )
+                {
+                    LOG_TRACE("Attempting LossRecovery before kalman update...");
+                    recovered = LossRecovery();
+                    if ( recovered )
+                    {
+                        LOG_TRACE("Recovery succeeded!");
+                    }
+                    else
+                    {
+                        LOG_TRACE("Recovery FAILED");
+                    }
+                }
                 if( kalmanOk && found && found2 )
                 {
-                    kalmanOk = m_kalman.update ( measurement );
+                    if ( kltGaveUp && recovered )
+                    {
+                        // use values set by LossRecovery
+                        measurement[0] = m_pos.x;
+                        measurement[1] = m_pos.y;
+                        measurement[2] = (double) GetHeading();
+                    }
+                    if ( !kltGaveUp || recovered )
+                    {
+                        kalmanOk = m_kalman.update ( measurement );
+                    }
                 }
-                CvPoint3D32f currPos  = m_kalman.getPosition();
                 if ( kalmanOk )
                 {
+                    CvPoint3D32f currPos  = m_kalman.getPosition();
                     m_pos.x = currPos.x;
                     m_pos.y = currPos.y;
                     m_angle = currPos.z;
                 }
                 std::cout << "err:" << err << std::endl;
-                if ( kltGaveUp && ( err++ >= KALMAN_LIMIT ) )
+                if ( ( kltGaveUp ) || ( !kltGaveUp && m_kalman.getError() > 100 ) )
                 {
-                    LOG_WARN("Kalman giving up");
-                    kalmanOk = false;
+                    if ( err++ >= KALMAN_LIMIT )
+                    {
+                        LOG_WARN("Kalman giving up");
+                        kalmanOk = false;
+                        Deactivate();
+                        LossRecovery();
+                    }
                 }
             }
         }
@@ -766,7 +805,7 @@ void KltTracker::InitialiseRecoverySystem()
  and normalised cross correlation in all the
  moving areas in the image to localise the robot.
  **/
-void KltTracker::LossRecovery()
+bool KltTracker::LossRecovery()
 {
     InitialiseRecoverySystem();
 
@@ -781,7 +820,7 @@ void KltTracker::LossRecovery()
     cvConvertScale(m_filtered, m_avg, 1, 0.0);
 
     cvThreshold(m_avg, m_avg, 200, 255, CV_THRESH_BINARY);
-    TargetSearch( m_avg );
+    bool recovered = TargetSearch( m_avg );
 
     IplImage* colImg = cvCreateImage( cvSize( m_currImg->width, m_currImg->height ), IPL_DEPTH_8U, 3 );
     cvCvtColor( m_currImg, colImg, CV_GRAY2RGB );
@@ -790,6 +829,8 @@ void KltTracker::LossRecovery()
     cvCopy( m_avg, colImg );
 
     cvReleaseImage(&colImg);
+
+    return recovered;
 }
 
 /**
@@ -797,7 +838,7 @@ void KltTracker::LossRecovery()
  in the image. If the optional mask is specified then only pixels
  where the mask is non-zero will be searched by the algorithm.
  **/
-void KltTracker::TargetSearch( const IplImage* mask )
+bool KltTracker::TargetSearch( const IplImage* mask )
 {
     int r = (int)m_metrics->GetRadiusPx();
     int ws = 2 * r;
@@ -840,13 +881,36 @@ void KltTracker::TargetSearch( const IplImage* mask )
 
     cvReleaseImage( &ncc );
 
-    if ( maxVal > 0.7 )
+    std::cout
+        <<
+        "Target search"
+        <<
+        "\n\tx:"
+        <<
+        m_pos.x
+        <<
+        "\tmaxX:"
+        <<
+        maxPos.x
+        <<
+        "\n\ty:"
+        <<
+        m_pos.y
+        <<
+        "\tmaxY:"
+        <<
+        maxPos.y
+        <<
+        std::endl;
+
+    if ( maxVal > 0.3 )
     {
         LOG_INFO(QObject::tr("Relocalised at %1 %2 (score: %3).").arg(maxPos.x)
                                                                  .arg(maxPos.y)
                                                                  .arg(maxVal));
         SetPosition( maxPos );
         Activate();
+        return true;
     }
     else if ( maxVal > -1.0 )
     {
@@ -854,6 +918,7 @@ void KltTracker::TargetSearch( const IplImage* mask )
                                                                                 .arg(maxPos.y)
                                                                                 .arg(maxVal));
     }
+    return false;
 }
 
 /**

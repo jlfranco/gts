@@ -29,6 +29,7 @@ public:
     void init ( Kalman::MVec measurement );
     void init ( Kalman::MVec measurement, double timestampMs );
     void deInit ();
+    void setPosition ( Kalman::MVec pos );
 
     /**
      * Uses process model to predict the robot's next position.

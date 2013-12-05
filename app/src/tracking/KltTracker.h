@@ -95,7 +95,7 @@ public:
             robPos[0] = robotPosition.x;
             robPos[1] = robotPosition.y;
             robPos[2] = ComputeHeading( robotPosition );
-            m_kalman.init( robPos );
+            m_kalman.setPosition( robPos );
         }
 
         m_pos = robotPosition;
@@ -122,7 +122,7 @@ public:
     bool Track( double timestampInMillisecs, bool flipCorrect, bool init );
     void DoInactiveProcessing( double timeStamp );
     void MotionDetect();
-    void LossRecovery();
+    bool LossRecovery();
 
     void Rewind( double timeStamp );
 
@@ -153,7 +153,7 @@ private:
         m_status = TRACKER_JUST_LOST;
     }
 
-    void TargetSearch( const IplImage* mask = 0 );
+    bool TargetSearch( const IplImage* mask = 0 );
 
     CvPoint2D32f m_pos;
     float m_angle;

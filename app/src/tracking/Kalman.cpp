@@ -31,12 +31,10 @@ Kalman::~Kalman()
 void Kalman::init( MVec measurement )
 {
     fprintf( stderr, "Kalman::init\n");
-    m_pos.x = measurement[0];
-    m_pos.y = measurement[1];
-    m_pos.z = measurement[2]; // angle
-    m_current_state[0] = m_pos.x;
-    m_current_state[1] = m_pos.y;
-    m_current_state[2] = m_pos.z;
+    setPosition( measurement );
+    m_current_state[0] = measurement[0];
+    m_current_state[1] = measurement[1];
+    m_current_state[2] = measurement[2];
     m_current_state[3] = 0;
     m_current_state[4] = 0;
 
@@ -61,6 +59,13 @@ void Kalman::deInit()
 {
     fprintf( stderr, "Kalman::deInit\n");
     m_init = false;
+}
+
+void Kalman::setPosition( Kalman::MVec pos )
+{
+    m_pos.x = pos[0];
+    m_pos.y = pos[1];
+    m_pos.z = pos[2]; // angle
 }
 
 bool Kalman::cholesky (const cv::Mat & inputmat, cv::Mat & output)
@@ -332,9 +337,7 @@ void Kalman::setPosition( CvPoint2D32f pos )
 
 void Kalman::setCurrentState( MVec pos, double linearSpeed, double angularSpeed )
 {
-    m_pos.x = pos[0];
-    m_pos.y = pos[1];
-    m_pos.z = pos[2];
+    setPosition ( pos );
 
     m_current_state[0] = m_pos.x;
     m_current_state[1] = m_pos.y;
