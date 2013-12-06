@@ -30,6 +30,11 @@
 #include "Logging.h"
 #include <iostream>
 
+#define KALMAN_DEBUG
+#ifdef KALMAN_DEBUG
+#include <fstream>
+#endif
+
 #include <opencv/cxcore.h>
 #include <opencv/highgui.h>
 
@@ -391,6 +396,58 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                 }
                 if ( kalmanOk )
                 {
+#ifdef KALMAN_DEBUG
+                    static std::ofstream kalmanLog("kalman.log");
+                    assert( kalmanLog.is_open() && "Failed to open log file!" );
+                    Kalman::SVec state = m_kalman.getCurrentState();
+                    float kalmanErr = m_kalman.getError();
+                    /*
+                      format:
+                      tMs kX kY kAngle kVel kAngleVel kError x y angle
+                    */
+                    kalmanLog
+                        <<
+                        timestampInMillisecs
+                        <<
+                        "\t"
+                        <<
+                        state[0]
+                        <<
+                        "\t"
+                        <<
+                        state[1]
+                        <<
+                        "\t"
+                        <<
+                        state[2]
+                        <<
+                        "\t"
+                        <<
+                        state[3]
+                        <<
+                        "\t"
+                        <<
+                        state[4]
+                        <<
+                        "\t"
+                        <<
+                        kalmanErr
+                        <<
+                        "\t"
+                        <<
+                        m_pos.x
+                        <<
+                        "\t"
+                        <<
+                        m_pos.y
+                        <<
+                        "\t"
+                        <<
+                        m_angle
+                        <<
+                        std::endl;
+#endif
+
                     CvPoint3D32f currPos  = m_kalman.getPosition();
                     m_pos.x = currPos.x;
                     m_pos.y = currPos.y;
