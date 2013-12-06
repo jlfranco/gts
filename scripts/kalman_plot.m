@@ -20,7 +20,7 @@ function [kx,ky,ko,kv,kov,x,y,o,vel,tvel,t,dt] = kalman_plot(filename)
   % calculate vel
   vel = [x(2:end) y(2:end)] - [x(1:end-1) y(1:end-1)];
   dt  = t(2:end)-t(1:end-1);
-  vel = sqrt(vel(:,1).^2 + vel(:,1).^2)./dt;
+  vel = sqrt(vel(:,1).^2 + vel(:,2).^2)./dt;
   tvel= t(2:end);
 
   %% plots
