@@ -29,6 +29,7 @@
 
 #include "Logging.h"
 #include <iostream>
+#include <algorithm>
 
 #include <opencv/cxcore.h>
 #include <opencv/highgui.h>
@@ -248,6 +249,7 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
     char found = 0;
     bool found2 = false;
     bool kltGaveUp = false;
+    float ncc;
     CvPoint2D32f newPos;
     static int err = 0;
 
@@ -262,7 +264,6 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
     {
         kltFlags = CV_LKFLOW_PYR_A_READY; // prev should be ready because TrackStage2 gets called in Activate().
     }
-
     cvCalcOpticalFlowPyrLK( m_prevImg,
                             m_currImg,
                             m_prevPyr,
@@ -291,7 +292,7 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                 "\tang:"  <<
                 tmpH      <<
                 std::endl;
-            float ncc = GetError();
+            ncc = GetError();
             kltGaveUp = ncc < m_nccThresh;
             if ( !kltGaveUp && err > 0 )
             {
@@ -353,7 +354,7 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
             CvPoint2D32f pos = GetPosition();
             measurement[0] = pos.x;
             measurement[1] = pos.y;
-            measurement[2] = (double) GetHeading();
+            measurement[2] = GetHeading(); // Care must be taken with angle wrapping
             if ( !m_kalman.isInit() )
             {
                 m_kalman.init( measurement, timestampInMillisecs );
@@ -364,8 +365,11 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                 bool recovered = false;
                 if ( kltGaveUp )
                 {
+                    /*
                     LOG_TRACE("Attempting LossRecovery before kalman update...");
                     recovered = LossRecovery();
+                    */
+                  recovered = Relocalize(2.*(err+1), err < 5 ? 2 : (err < 10 ? 4 : 6), 5);
                     if ( recovered )
                     {
                         LOG_TRACE("Recovery succeeded!");
@@ -374,6 +378,7 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                     {
                         LOG_TRACE("Recovery FAILED");
                     }
+
                 }
                 if( kalmanOk && found && found2 )
                 {
@@ -382,7 +387,7 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                         // use values set by LossRecovery
                         measurement[0] = m_pos.x;
                         measurement[1] = m_pos.y;
-                        measurement[2] = (double) GetHeading();
+                        measurement[2] = (double) GetHeading(); // Angle wrapping warning!
                     }
                     if ( !kltGaveUp || recovered )
                     {
@@ -404,7 +409,7 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                         LOG_WARN("Kalman giving up");
                         kalmanOk = false;
                         Deactivate();
-                        LossRecovery();
+                        //LossRecovery();
                     }
                 }
             }
@@ -903,7 +908,7 @@ bool KltTracker::TargetSearch( const IplImage* mask )
         <<
         std::endl;
 
-    if ( maxVal > 0.3 )
+    if ( maxVal > 0.7 )
     {
         LOG_INFO(QObject::tr("Relocalised at %1 %2 (score: %3).").arg(maxPos.x)
                                                                  .arg(maxPos.y)
@@ -919,6 +924,70 @@ bool KltTracker::TargetSearch( const IplImage* mask )
                                                                                 .arg(maxVal));
     }
     return false;
+}
+
+bool KltTracker::Relocalize(double searchRadius, double angleRange, int numberOfSamples)
+{
+  assert(numberOfSamples > 1 && "Number of samples must be greater than one");
+  int ws = 2 * int(m_metrics->GetRadiusPx());
+  double current_angle = m_angle;
+  double warp_angle;
+  std::vector<double> anglesToTry;
+  std::vector<IplImage *> warpedTargets;
+  double startingAngle = current_angle - 0.5 * angleRange;
+  for (int i = 0; i < numberOfSamples; ++i)
+  {
+    warp_angle = startingAngle + i * angleRange / (numberOfSamples - 1);
+    anglesToTry.push_back(warp_angle);
+    PredictTargetAppearance(warp_angle, 0);
+    warpedTargets.push_back(cvCloneImage(m_appearanceImg));
+  }
+  PredictTargetAppearance(current_angle, 0);
+  int best_angle;
+  int best_i, best_j;
+  float best_correlation = 0;
+  float current_correlation = 0;
+  int min_i = std::max(0, int(m_pos.y - searchRadius));
+  int min_j = std::max(0, int(m_pos.x - searchRadius));
+  int max_i = std::min(m_currImg->height - 1, int(m_pos.y + searchRadius));
+  int max_j = std::min(m_currImg->width - 1,  int(m_pos.x + searchRadius));
+  for (int i = min_i; i <= max_i; ++i)
+  {
+    for (int j = min_j; j <= max_j; ++j)
+    {
+      for (int k = 0; k < numberOfSamples; ++k)
+      {
+        current_correlation = CrossCorrelation::Ncc2d(
+            warpedTargets[k], m_currImg, m_pos.x, m_pos.y, i, j, ws, ws);
+        if (current_correlation > best_correlation)
+        {
+          best_correlation = current_correlation;
+          best_i = i;
+          best_j = j;
+          best_angle = k;
+        }
+      }
+    }
+  }
+  // Release images
+  for (int k = 0; k < numberOfSamples; ++k)
+  {
+    cvReleaseImage(&warpedTargets[k]);
+  }
+  float currentError = GetError();
+  if (best_correlation > std::max(0.55f, currentError))
+  {
+    m_pos.x = best_j;
+    m_pos.y = best_i;
+    m_angle = anglesToTry[best_angle];
+    // It may be good to call TrackStage2 here!
+    //Activate();
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
 
 /**

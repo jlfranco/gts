@@ -102,9 +102,10 @@ bool Kalman::cholesky (const cv::Mat & inputmat, cv::Mat & output)
 
 bool Kalman::predict( double timestampMs )
 {
-  fprintf( stderr, "Kalman::predict\n");
+  //fprintf( stderr, "Kalman::predict\n");
 
-  double delta_t = timestampMs - m_timestampMs;
+  // delta_t is in seconds
+  double delta_t = 1e-3*(timestampMs - m_timestampMs);
   m_timestampMs = timestampMs;
 
   // First, construct the extended state vector and covariance matrix
@@ -157,7 +158,9 @@ bool Kalman::predict( double timestampMs )
   {
       new_point[0] = (*it)[0] + delta_t * (*it)[3] * cos((*it)[2]) + (*it)[5];
       new_point[1] = (*it)[1] + delta_t * (*it)[3] * sin((*it)[2]) + (*it)[6];
-      new_point[2] = (*it)[2] + delta_t * (*it)[4] + (*it)[7];
+      //new_point[2] = (*it)[2] + delta_t * (*it)[4] + (*it)[7];
+      // Let's forget about angular velocity for a while
+      new_point[2] = (*it)[2] + (*it)[7];
       new_point[3] = (*it)[3] + (*it)[8];
       new_point[4] = (*it)[4] + (*it)[9];
       transformed_points.push_back(new_point);
@@ -189,7 +192,7 @@ bool Kalman::predict( double timestampMs )
 
 bool Kalman::update( const MVec measurement )
 {
-  fprintf( stderr, "Kalman::update\n");
+  //fprintf( stderr, "Kalman::update\n");
   // First, construct the extended state vector and covariance matrix
   // to extract the sigma-points for prediction
   SVecExtUpdate extended_state;
@@ -307,6 +310,11 @@ bool Kalman::update( const MVec measurement )
 Kalman::SVec Kalman::getCurrentState() const
 {
     return m_current_state;
+}
+
+Kalman::SCov Kalman::getCurrentCov() const
+{
+    return m_current_cov;
 }
 
 float Kalman::getError() const

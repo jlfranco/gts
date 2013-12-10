@@ -124,6 +124,8 @@ public:
     void MotionDetect();
     bool LossRecovery();
 
+    bool Relocalize(double searchRadius, double angleRange, int numberOfSamples);
+
     void Rewind( double timeStamp );
 
     bool LoadTargetImage( const char* fileName );
