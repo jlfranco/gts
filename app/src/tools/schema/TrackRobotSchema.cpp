@@ -35,6 +35,7 @@ namespace TrackRobotSchema
         const KeyName nccThreshold    ("nccThreshold");
         const KeyName resolution      ("resolution");
         const KeyName tracker         ("tracker");
+        const KeyName kalmanTh        ("kalmanTh");
     }
 
     namespace PerCameraTrackingParams
@@ -46,5 +47,6 @@ namespace TrackRobotSchema
         const KeyName nccThreshold    ("camNccThreshold");
         const KeyName resolution      ("camResolution");
         const KeyName tracker         ("camtracker");
+        const KeyName kalmanTh        ("camKalmanTh");
     }
 }

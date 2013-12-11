@@ -110,6 +110,7 @@ bool GtsScene::LoadCameraConfig( const KeyId               camPosId,
     int biLevelThreshold = trackConfig.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::biLevelThreshold).ToInt();
     double nccThreshold = trackConfig.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::nccThreshold).ToDouble();
     int resolution = trackConfig.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::resolution).ToInt();
+    double kalmanTh = trackConfig.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::kalmanTh).ToDouble();
 
     RobotTracker::trackerType tracker = (RobotTracker::trackerType) trackConfig.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::tracker).ToInt();
 
@@ -127,6 +128,7 @@ bool GtsScene::LoadCameraConfig( const KeyId               camPosId,
                 nccThreshold = trackConfig.GetKeyValue(TrackRobotSchema::PerCameraTrackingParams::nccThreshold, it->id).ToDouble();
                 resolution = trackConfig.GetKeyValue(TrackRobotSchema::PerCameraTrackingParams::resolution, it->id).ToInt();
                 tracker = (RobotTracker::trackerType) trackConfig.GetKeyValue(TrackRobotSchema::PerCameraTrackingParams::tracker, it->id).ToInt();
+                kalmanTh = trackConfig.GetKeyValue(TrackRobotSchema::PerCameraTrackingParams::kalmanTh, it->id).ToDouble();
             }
 
             break;
@@ -147,6 +149,7 @@ bool GtsScene::LoadCameraConfig( const KeyId               camPosId,
     LOG_INFO(QObject::tr("Tracking param - ncc: %1.").arg(nccThreshold));
     LOG_INFO(QObject::tr("Tracking param - resolution: %1.").arg(resolution));
     LOG_INFO(QObject::tr("Tracking param - tracker: %1.").arg((int)tracker));
+    LOG_INFO(QObject::tr("Tracking param - kalman th: %1.").arg(kalmanTh));
 
     m_view[m_ln].SetId( m_ln );
 
@@ -178,6 +181,7 @@ bool GtsScene::LoadCameraConfig( const KeyId               camPosId,
     };
 
     m_view[m_ln].SetTrackerParam( RobotTracker::PARAM_NCC_THRESHOLD, nccThreshold );
+    m_view[m_ln].SetTrackerParam( RobotTracker::PARAM_KALMAN_THRESHOLD, kalmanTh );
 
     float shutter = 411;
     float gain = 75;

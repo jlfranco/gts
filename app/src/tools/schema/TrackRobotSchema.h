@@ -38,6 +38,7 @@ namespace TrackRobotSchema
         extern const KeyName nccThreshold;
         extern const KeyName resolution;
         extern const KeyName tracker;
+        extern const KeyName kalmanTh;
     }
 
     namespace PerCameraTrackingParams
@@ -49,6 +50,7 @@ namespace TrackRobotSchema
         extern const KeyName nccThreshold;
         extern const KeyName resolution;
         extern const KeyName tracker;
+        extern const KeyName kalmanTh;
     }
 }
 

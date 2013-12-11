@@ -51,7 +51,7 @@
 KltTracker::KltTracker( const CameraCalibration* cal,
                         const RobotMetrics* metrics,
                         const IplImage* currentImage,
-                        int thresh ) :
+                        int thresh) :
     RobotTracker    (),
     m_pos           ( cvPoint2D32f( 0.f, 0.f ) ),
     m_angle         ( 0.f ),
@@ -69,7 +69,7 @@ KltTracker::KltTracker( const CameraCalibration* cal,
     m_avg           ( 0 ),
     m_diff          ( 0 ),
     m_filtered      ( 0 ),
-    m_useKalman     ( true ),
+    m_kalmanTh      ( 0.0f ),
     m_history       (),
     m_cal           ( cal ),
     m_metrics       ( metrics )
@@ -305,7 +305,7 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                 err = 0;
             }
 
-            if ( kltGaveUp && (!m_useKalman || err > KALMAN_LIMIT) )
+            if ( kltGaveUp && (!UseKalman() || err > KALMAN_LIMIT) )
             {
                 err = 0;
                 if ( !IsLost() )
@@ -346,7 +346,7 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
 
     bool kalmanOk = false;
     // kalman
-    if( m_useKalman )
+    if( UseKalman() )
     {
         if( init )
         {
@@ -620,6 +620,11 @@ bool KltTracker::TrackStage2( CvPoint2D32f newPos, bool flipCorrect, bool init )
     }
 
     return false;
+}
+
+bool KltTracker::UseKalman() const
+{
+    return m_kalmanTh > 0.0f;
 }
 
 /**
@@ -1075,6 +1080,9 @@ void KltTracker::SetParam( paramType param, float value )
     {
         case PARAM_NCC_THRESHOLD:
             m_nccThresh = value;
+            break;
+        case PARAM_KALMAN_THRESHOLD:
+            m_kalmanTh = value;
             break;
     }
 }

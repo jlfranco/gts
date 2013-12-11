@@ -89,7 +89,7 @@ public:
     {
         fprintf( stderr, "KltTracker::SetPosition\n");
 
-        if ( m_useKalman )
+        if ( UseKalman() )
         {
             Kalman::MVec robPos;
             robPos[0] = robotPosition.x;
@@ -179,8 +179,9 @@ private:
     IplImage* m_diff; // Difference image for motion detection
     IplImage* m_filtered; // filtered motion image
 
-    bool m_useKalman;
+    float  m_kalmanTh;
     Kalman m_kalman;
+    bool   UseKalman() const;
 
     // History stores the position, orientation, tracker error and time stamp.
     TrackHistory::TrackLog m_history;

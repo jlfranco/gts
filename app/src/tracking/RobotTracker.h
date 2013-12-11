@@ -44,7 +44,8 @@ public:
 
     enum paramType
     {
-        PARAM_NCC_THRESHOLD = 0
+        PARAM_NCC_THRESHOLD = 0,
+        PARAM_KALMAN_THRESHOLD
     };
 
     enum trackerStatus
