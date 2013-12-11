@@ -2,6 +2,7 @@
  */
 
 #include "Kalman.h"
+#include "Angles.h"
 
 #include "Logging.h"
 
@@ -288,8 +289,13 @@ bool Kalman::update( const MVec measurement )
         (transformed_points[i] - predicted_meas).t();
   }
   CCov kalman_gain = cross_cov * weighted_cov.inv();
+
+  MVec measPredDiff = measurement - predicted_meas;
+  // correct angle diff
+  measPredDiff[2] = Angles::DiffAngle(measurement[2], predicted_meas[2]);
+
   SVecExtUpdate corrected_state = extended_state +
-      kalman_gain * (measurement - predicted_meas);
+      kalman_gain * (measPredDiff);
   CovExtUpdate corrected_cov = extended_covariance -
       kalman_gain * weighted_cov * kalman_gain.t();
   for (int i = 0; i < X_LEN; ++i)
