@@ -43,7 +43,8 @@ public:
 
     enum paramType
     {
-        PARAM_NCC_THRESHOLD = 0
+        PARAM_NCC_THRESHOLD = 0,
+        PARAM_KALMAN_THRESHOLD
     };
 
     enum trackerStatus
@@ -82,7 +83,7 @@ public:
     virtual void Activate();
     virtual void Deactivate();
     virtual void DoInactiveProcessing(double timeStamp) = 0;
-    virtual void LossRecovery() {}
+    virtual bool LossRecovery() {return false;}
 
     virtual const CameraCalibration* GetCalibration()    const = 0;
     virtual const RobotMetrics*      GetMetrics()        const = 0;

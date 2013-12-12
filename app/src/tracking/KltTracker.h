@@ -20,6 +20,7 @@
 #define KLTTRACKER_H
 
 #include "RobotTracker.h"
+#include "Kalman.h"
 
 class CameraCalibration;
 class RobotMetrics;
@@ -83,6 +84,15 @@ public:
     {
         fprintf( stderr, "KltTracker::SetPosition\n");
 
+        if ( UseKalman() )
+        {
+            Kalman::MVec robPos;
+            robPos[0] = robotPosition.x;
+            robPos[1] = robotPosition.y;
+            robPos[2] = ComputeHeading( robotPosition );
+            m_kalman.setPosition( robPos );
+        }
+
         m_pos = robotPosition;
     }
 
@@ -107,7 +117,9 @@ public:
     bool Track( double timestampInMillisecs, bool flipCorrect, bool init );
     void DoInactiveProcessing( double timeStamp );
     void MotionDetect();
-    void LossRecovery();
+    bool LossRecovery();
+
+    bool Relocalize(double searchRadius, double angleRange, int numberOfSamples);
 
     void Rewind( double timeStamp );
 
@@ -138,7 +150,7 @@ private:
         m_status = TRACKER_JUST_LOST;
     }
 
-    void TargetSearch( const IplImage* mask = 0 );
+    bool TargetSearch( const IplImage* mask = 0 );
 
     CvPoint2D32f m_pos;
     float m_angle;
@@ -161,6 +173,10 @@ private:
     IplImage* m_avg; // Temporal average image
     IplImage* m_diff; // Difference image for motion detection
     IplImage* m_filtered; // filtered motion image
+
+    float  m_kalmanTh;
+    Kalman m_kalman;
+    bool   UseKalman() const;
 
     // History stores the position, orientation, tracker error and time stamp.
     TrackHistory::TrackLog m_history;

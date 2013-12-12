@@ -28,6 +28,13 @@
 #include "MathsConstants.h"
 
 #include "Logging.h"
+#include <iostream>
+#include <algorithm>
+
+#define KALMAN_DEBUG
+#ifdef KALMAN_DEBUG
+#include <fstream>
+#endif
 
 #include <opencv/cxcore.h>
 #include <opencv/highgui.h>
@@ -62,6 +69,7 @@ KltTracker::KltTracker( const CameraCalibration* cal,
     m_avg           ( 0 ),
     m_diff          ( 0 ),
     m_filtered      ( 0 ),
+    m_kalmanTh      ( 0.0f ),
     m_history       (),
     m_cal           ( cal ),
     m_metrics       ( metrics )
@@ -232,6 +240,7 @@ void KltTracker::DoInactiveProcessing( double timeStamp )
     }
 }
 
+#define KALMAN_LIMIT 15
 /**
  Run an interation of the tracker (tracks from previous frame to current frame).
  On each new frame, be sure to call SetCurrentImage() before calling Track().
@@ -243,7 +252,11 @@ void KltTracker::DoInactiveProcessing( double timeStamp )
 bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init )
 {
     char found = 0;
+    bool found2 = false;
+    bool kltGaveUp = false;
+    float ncc;
     CvPoint2D32f newPos;
+    static int err = 0;
 
     // First we do simple frame-to-frame KLT track.
     AllocatePyramids();
@@ -271,50 +284,197 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                             cvTermCriteria( CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, 0.03 ),
                             kltFlags );
 
-    if ( found && TrackStage2( newPos, flipCorrect, false ) )
+    if ( found )
     {
-        float ncc = GetError();
-
-        if ( ncc < m_nccThresh )
+        found2 = TrackStage2( newPos, flipCorrect, false );
+        if( found2 )
         {
-            if ( !IsLost() )
+            double tmpH = GetHeading();
+            std::cout     <<
+                "x:"      <<
+                newPos.x  <<
+                "\ty:"    <<
+                newPos.y  <<
+                "\tang:"  <<
+                tmpH      <<
+                std::endl;
+            ncc = GetError();
+            kltGaveUp = ncc < m_nccThresh;
+            if ( !kltGaveUp && err > 0 )
             {
-                LOG_WARN("Lost.");
+                LOG_INFO("klt back, restarting kalman error count.");
+                err = 0;
+            }
 
-                LOG_INFO(QObject::tr("NCC value: %1 (thresh %2).").arg(ncc)
-                                                                  .arg(m_nccThresh));
-                SetJustLost(); // tracker has transitioned into lost state
+            if ( kltGaveUp && (!UseKalman() || err > KALMAN_LIMIT) )
+            {
+                err = 0;
+                if ( !IsLost() )
+                {
+                    LOG_WARN("Lost.");
+
+                    LOG_INFO(QObject::tr("NCC value: %1 (thresh %2).").arg(ncc)
+                             .arg(m_nccThresh));
+                    SetJustLost(); // tracker has transitioned into lost state
+                }
+                else
+                {
+                    LOG_WARN("Still lost.");
+
+                    SetLost(); // ttacker is still lost
+                }
+            }
+
+            // Read the warp gradient magnitude at the tracked position to store in TrackEntry for later use.
+            const CvMat* wgi = m_cal->GetWarpGradientImage();
+            int x = static_cast<int>( m_pos.x + .5f );
+            int y = static_cast<int>( m_pos.y + .5f );
+            float warpGradient = TrackEntry::unknownWgm;
+            if ( ( x < wgi->cols ) && ( y < wgi->rows ) ) ///@todo Need to investigate why we sometimes access beyond the edge of wgi image.
+            {
+                warpGradient = CV_MAT_ELEM( *wgi, float, y, x );
+            }
+
+            // If we found a good track and the 2nd stage was a success then store the result
+            const float error = GetError();
+
+            assert( error >= -1.0 );
+            assert( error <= 1.0 );
+
+            m_history.emplace_back( TrackEntry( GetPosition(), GetHeading(), GetError(), timestampInMillisecs, warpGradient ) );
+        }
+    }
+
+    bool kalmanOk = false;
+    // kalman
+    if( UseKalman() )
+    {
+        if( init )
+        {
+            m_kalman.deInit();
+        }
+        else
+        {
+            std::cout << "m_error:" << m_kalman.getError() << std::endl;
+            Kalman::MVec measurement;
+            CvPoint2D32f pos = GetPosition();
+            measurement[0] = pos.x;
+            measurement[1] = pos.y;
+            measurement[2] = GetHeading(); // Care must be taken with angle wrapping
+            if ( !m_kalman.isInit() )
+            {
+                m_kalman.init( measurement, timestampInMillisecs );
             }
             else
             {
-                LOG_WARN("Still lost.");
+                kalmanOk = m_kalman.predict( timestampInMillisecs );
+                bool recovered = false;
+                if ( kltGaveUp )
+                {
+                    /*
+                    LOG_TRACE("Attempting LossRecovery before kalman update...");
+                    recovered = LossRecovery();
+                    */
+                  recovered = Relocalize(2.*(err+1), err < 5 ? 2 : (err < 10 ? 4 : 6), 5);
+                    if ( recovered )
+                    {
+                        LOG_TRACE("Recovery succeeded!");
+                    }
+                    else
+                    {
+                        LOG_TRACE("Recovery FAILED");
+                    }
 
-                SetLost(); // ttacker is still lost
+                }
+                if( kalmanOk && found && found2 )
+                {
+                    if ( kltGaveUp && recovered )
+                    {
+                        // use values set by LossRecovery
+                        measurement[0] = m_pos.x;
+                        measurement[1] = m_pos.y;
+                        measurement[2] = (double) GetHeading(); // Angle wrapping warning!
+                    }
+                    if ( !kltGaveUp || recovered )
+                    {
+                        kalmanOk = m_kalman.update ( measurement );
+                    }
+                }
+                if ( kalmanOk )
+                {
+#ifdef KALMAN_DEBUG
+                    static std::ofstream kalmanLog("kalman.log");
+                    assert( kalmanLog.is_open() && "Failed to open log file!" );
+                    Kalman::SVec state = m_kalman.getCurrentState();
+                    float kalmanErr = m_kalman.getError();
+                    /*
+                      format:
+                      tMs kX kY kAngle kVel kAngleVel kError x y angle
+                    */
+                    kalmanLog
+                        <<
+                        timestampInMillisecs
+                        <<
+                        "\t"
+                        <<
+                        state[0]
+                        <<
+                        "\t"
+                        <<
+                        state[1]
+                        <<
+                        "\t"
+                        <<
+                        state[2]
+                        <<
+                        "\t"
+                        <<
+                        state[3]
+                        <<
+                        "\t"
+                        <<
+                        state[4]
+                        <<
+                        "\t"
+                        <<
+                        kalmanErr
+                        <<
+                        "\t"
+                        <<
+                        m_pos.x
+                        <<
+                        "\t"
+                        <<
+                        m_pos.y
+                        <<
+                        "\t"
+                        <<
+                        m_angle
+                        <<
+                        std::endl;
+#endif
+
+                    CvPoint3D32f currPos  = m_kalman.getPosition();
+                    m_pos.x = currPos.x;
+                    m_pos.y = currPos.y;
+                    m_angle = currPos.z;
+                }
+                std::cout << "err:" << err << std::endl;
+                if ( ( kltGaveUp ) || ( !kltGaveUp && m_kalman.getError() > 100 ) )
+                {
+                    if ( err++ >= KALMAN_LIMIT )
+                    {
+                        LOG_WARN("Kalman giving up");
+                        kalmanOk = false;
+                        Deactivate();
+                        //LossRecovery();
+                    }
+                }
             }
         }
-
-        // Read the warp gradient magnitude at the tracked position to store in TrackEntry for later use.
-        const CvMat* wgi = m_cal->GetWarpGradientImage();
-        int x = static_cast<int>( m_pos.x + .5f );
-        int y = static_cast<int>( m_pos.y + .5f );
-        float warpGradient = TrackEntry::unknownWgm;
-        if ( ( x < wgi->cols ) && ( y < wgi->rows ) ) ///@todo Need to investigate why we sometimes access beyond the edge of wgi image.
-        {
-            warpGradient = CV_MAT_ELEM( *wgi, float, y, x );
-        }
-
-        // If we found a good track and the 2nd stage was a success then store the result
-        const float error = GetError();
-        
-	assert( error >= -1.0 );
-        assert( error <= 1.0 );
-
-        m_history.emplace_back( TrackEntry( GetPosition(), GetHeading(), GetError(), timestampInMillisecs, warpGradient ) );
-
-        return true;
     }
 
-    return false;
+    return found || found2;
 }
 
 void KltTracker::Rewind( double timeStamp )
@@ -460,6 +620,11 @@ bool KltTracker::TrackStage2( CvPoint2D32f newPos, bool flipCorrect, bool init )
     }
 
     return false;
+}
+
+bool KltTracker::UseKalman() const
+{
+    return m_kalmanTh > 0.0f;
 }
 
 /**
@@ -707,7 +872,7 @@ void KltTracker::InitialiseRecoverySystem()
  and normalised cross correlation in all the
  moving areas in the image to localise the robot.
  **/
-void KltTracker::LossRecovery()
+bool KltTracker::LossRecovery()
 {
     InitialiseRecoverySystem();
 
@@ -722,7 +887,7 @@ void KltTracker::LossRecovery()
     cvConvertScale(m_filtered, m_avg, 1, 0.0);
 
     cvThreshold(m_avg, m_avg, 200, 255, CV_THRESH_BINARY);
-    TargetSearch( m_avg );
+    bool recovered = TargetSearch( m_avg );
 
     IplImage* colImg = cvCreateImage( cvSize( m_currImg->width, m_currImg->height ), IPL_DEPTH_8U, 3 );
     cvCvtColor( m_currImg, colImg, CV_GRAY2RGB );
@@ -731,6 +896,8 @@ void KltTracker::LossRecovery()
     cvCopy( m_avg, colImg );
 
     cvReleaseImage(&colImg);
+
+    return recovered;
 }
 
 /**
@@ -738,7 +905,7 @@ void KltTracker::LossRecovery()
  in the image. If the optional mask is specified then only pixels
  where the mask is non-zero will be searched by the algorithm.
  **/
-void KltTracker::TargetSearch( const IplImage* mask )
+bool KltTracker::TargetSearch( const IplImage* mask )
 {
     int r = (int)m_metrics->GetRadiusPx();
     int ws = 2 * r;
@@ -788,6 +955,7 @@ void KltTracker::TargetSearch( const IplImage* mask )
                                                                  .arg(maxVal));
         SetPosition( maxPos );
         Activate();
+        return true;
     }
     else if ( maxVal > -1.0 )
     {
@@ -795,6 +963,71 @@ void KltTracker::TargetSearch( const IplImage* mask )
                                                                                 .arg(maxPos.y)
                                                                                 .arg(maxVal));
     }
+    return false;
+}
+
+bool KltTracker::Relocalize(double searchRadius, double angleRange, int numberOfSamples)
+{
+  assert(numberOfSamples > 1 && "Number of samples must be greater than one");
+  int ws = 2 * int(m_metrics->GetRadiusPx());
+  double current_angle = m_angle;
+  double warp_angle;
+  std::vector<double> anglesToTry;
+  std::vector<IplImage *> warpedTargets;
+  double startingAngle = current_angle - 0.5 * angleRange;
+  for (int i = 0; i < numberOfSamples; ++i)
+  {
+    warp_angle = startingAngle + i * angleRange / (numberOfSamples - 1);
+    anglesToTry.push_back(warp_angle);
+    PredictTargetAppearance(warp_angle, 0);
+    warpedTargets.push_back(cvCloneImage(m_appearanceImg));
+  }
+  PredictTargetAppearance(current_angle, 0);
+  int best_angle;
+  int best_i, best_j;
+  float best_correlation = 0;
+  float current_correlation = 0;
+  int min_i = std::max(0, int(m_pos.y - searchRadius));
+  int min_j = std::max(0, int(m_pos.x - searchRadius));
+  int max_i = std::min(m_currImg->height - 1, int(m_pos.y + searchRadius));
+  int max_j = std::min(m_currImg->width - 1,  int(m_pos.x + searchRadius));
+  for (int i = min_i; i <= max_i; ++i)
+  {
+    for (int j = min_j; j <= max_j; ++j)
+    {
+      for (int k = 0; k < numberOfSamples; ++k)
+      {
+        current_correlation = CrossCorrelation::Ncc2d(
+            warpedTargets[k], m_currImg, m_pos.x, m_pos.y, i, j, ws, ws);
+        if (current_correlation > best_correlation)
+        {
+          best_correlation = current_correlation;
+          best_i = i;
+          best_j = j;
+          best_angle = k;
+        }
+      }
+    }
+  }
+  // Release images
+  for (int k = 0; k < numberOfSamples; ++k)
+  {
+    cvReleaseImage(&warpedTargets[k]);
+  }
+  float currentError = GetError();
+  if (best_correlation > std::max(0.55f, currentError))
+  {
+    m_pos.x = best_j;
+    m_pos.y = best_i;
+    m_angle = anglesToTry[best_angle];
+    // It may be good to call TrackStage2 here!
+    //Activate();
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
 
 /**
@@ -825,6 +1058,9 @@ void KltTracker::SetParam( paramType param, float value )
     {
         case PARAM_NCC_THRESHOLD:
             m_nccThresh = value;
+            break;
+        case PARAM_KALMAN_THRESHOLD:
+            m_kalmanTh = value;
             break;
     }
 }
