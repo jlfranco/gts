@@ -280,7 +280,7 @@ namespace CrossCorrelation
 
         // compute and return normalised cross correlation
         float denom = sqrtf( sq1 * sq2 );
-        float ncc = corr/denom;
+        float ncc = ( denom == 0.f )? 0.f : corr/denom;
         return ncc;
     }
 
