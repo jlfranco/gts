@@ -38,6 +38,7 @@
 
 #include <opencv/cxcore.h>
 #include <opencv/highgui.h>
+#include <opencv2/opencv.hpp>
 
 /**
  This tracker must be constructed by passing in camera calibration information
@@ -269,7 +270,6 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
     {
         kltFlags = CV_LKFLOW_PYR_A_READY; // prev should be ready because TrackStage2 gets called in Activate().
     }
-
     cvCalcOpticalFlowPyrLK( m_prevImg,
                             m_currImg,
                             m_prevPyr,
@@ -290,14 +290,6 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
         if( found2 )
         {
             double tmpH = GetHeading();
-            std::cout     <<
-                "x:"      <<
-                newPos.x  <<
-                "\ty:"    <<
-                newPos.y  <<
-                "\tang:"  <<
-                tmpH      <<
-                std::endl;
             ncc = GetError();
             kltGaveUp = ncc < m_nccThresh;
             if ( !kltGaveUp && err > 0 )
@@ -325,23 +317,6 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                 }
             }
 
-            // Read the warp gradient magnitude at the tracked position to store in TrackEntry for later use.
-            const CvMat* wgi = m_cal->GetWarpGradientImage();
-            int x = static_cast<int>( m_pos.x + .5f );
-            int y = static_cast<int>( m_pos.y + .5f );
-            float warpGradient = TrackEntry::unknownWgm;
-            if ( ( x < wgi->cols ) && ( y < wgi->rows ) ) ///@todo Need to investigate why we sometimes access beyond the edge of wgi image.
-            {
-                warpGradient = CV_MAT_ELEM( *wgi, float, y, x );
-            }
-
-            // If we found a good track and the 2nd stage was a success then store the result
-            const float error = GetError();
-
-            assert( error >= -1.0 );
-            assert( error <= 1.0 );
-
-            m_history.emplace_back( TrackEntry( GetPosition(), GetHeading(), GetError(), timestampInMillisecs, warpGradient ) );
         }
     }
 
@@ -355,7 +330,6 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
         }
         else
         {
-            std::cout << "m_error:" << m_kalman.getError() << std::endl;
             Kalman::MVec measurement;
             CvPoint2D32f pos = GetPosition();
             measurement[0] = pos.x;
@@ -375,7 +349,7 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                     LOG_TRACE("Attempting LossRecovery before kalman update...");
                     recovered = LossRecovery();
                     */
-                  recovered = Relocalize(2.*(err+1), err < 5 ? 2 : (err < 10 ? 4 : 6), 5);
+                    recovered = Relocalize(4.*(err+1), err < 5 ? 15 : (err < 10 ? 30: 45), 11);
                     if ( recovered )
                     {
                         LOG_TRACE("Recovery succeeded!");
@@ -452,14 +426,15 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                         m_angle
                         <<
                         std::endl;
-#endif
-
-                    CvPoint3D32f currPos  = m_kalman.getPosition();
-                    m_pos.x = currPos.x;
-                    m_pos.y = currPos.y;
-                    m_angle = currPos.z;
+#endif //KALMAN_DEBUG
+                    if (kltGaveUp && !recovered)
+                    {
+                        CvPoint3D32f currPos  = m_kalman.getPosition();
+                        m_pos.x = currPos.x;
+                        m_pos.y = currPos.y;
+                        m_angle = currPos.z;
+                    }
                 }
-                std::cout << "err:" << err << std::endl;
                 if ( ( kltGaveUp ) || ( !kltGaveUp && m_kalman.getError() > 100 ) )
                 {
                     if ( err++ >= KALMAN_LIMIT )
@@ -472,6 +447,26 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                 }
             }
         }
+    }
+    if (found && found2)
+    {
+        // Read the warp gradient magnitude at the tracked position to store in TrackEntry for later use.
+        const CvMat* wgi = m_cal->GetWarpGradientImage();
+        int x = static_cast<int>( m_pos.x + .5f );
+        int y = static_cast<int>( m_pos.y + .5f );
+        float warpGradient = TrackEntry::unknownWgm;
+        if ( ( x < wgi->cols ) && ( y < wgi->rows ) ) ///@todo Need to investigate why we sometimes access beyond the edge of wgi image.
+        {
+            warpGradient = CV_MAT_ELEM( *wgi, float, y, x );
+        }
+
+        // If we found a good track and the 2nd stage was a success then store the result
+        const float error = GetError();
+
+        assert( error >= -1.0 );
+        assert( error <= 1.0 );
+
+        m_history.emplace_back( TrackEntry( GetPosition(), GetHeading(), GetError(), timestampInMillisecs, warpGradient ) );
     }
 
     return found || found2;
@@ -969,59 +964,97 @@ bool KltTracker::TargetSearch( const IplImage* mask )
 bool KltTracker::Relocalize(double searchRadius, double angleRange, int numberOfSamples)
 {
   assert(numberOfSamples > 1 && "Number of samples must be greater than one");
-  int ws = 2 * int(m_metrics->GetRadiusPx());
-  double current_angle = m_angle;
-  double warp_angle;
+  // Convert angle to degrees
+  double currentAngle = 180 + 180 * (m_kalman.getCurrentState()[2] -
+                               m_metrics->GetTargetRotationRad()) / M_PI;
+  double warpAngle;
+  int x_pad = 8;
+  int y_pad = 8;
   std::vector<double> anglesToTry;
-  std::vector<IplImage *> warpedTargets;
-  double startingAngle = current_angle - 0.5 * angleRange;
+  //cv::Mat targetAsMat = cv::Mat(m_targetImg);
+  cv::Mat targetAsMat;
+  cv::copyMakeBorder(cv::Mat(m_targetImg), targetAsMat, y_pad/2, y_pad/2,
+      x_pad/2, x_pad/2, cv::BORDER_CONSTANT, cv::Scalar(128));
+  cv::Point2f targetCenter( double(targetAsMat.cols)/2.,
+                            double(targetAsMat.rows)/2.);
+  cv::Mat rotMatrix;
+  std::vector<cv::Mat> warpedTargets;
+  double startingAngle = currentAngle - 0.5 * angleRange;
+  //Temporary! Also, every imwrite
+  char filename1[20];
+  char filename2[20];
+  // </Temporary>
   for (int i = 0; i < numberOfSamples; ++i)
   {
-    warp_angle = startingAngle + i * angleRange / (numberOfSamples - 1);
-    anglesToTry.push_back(warp_angle);
-    PredictTargetAppearance(warp_angle, 0);
-    warpedTargets.push_back(cvCloneImage(m_appearanceImg));
+    warpAngle = startingAngle + i * angleRange / (numberOfSamples - 1);
+    rotMatrix = cv::getRotationMatrix2D(targetCenter, warpAngle, 1.);
+    warpedTargets.push_back(targetAsMat.clone());
+    cv::warpAffine(targetAsMat, warpedTargets.back(), rotMatrix,
+        cv::Size(m_targetImg->width + x_pad, m_targetImg->height + y_pad),
+        cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(128));
+    sprintf(filename1, "wt%d.png", i);
+    cv::imwrite(filename1, warpedTargets.back());
+    anglesToTry.push_back(warpAngle);
   }
-  PredictTargetAppearance(current_angle, 0);
-  int best_angle;
-  int best_i, best_j;
-  float best_correlation = 0;
-  float current_correlation = 0;
-  int min_i = std::max(0, int(m_pos.y - searchRadius));
-  int min_j = std::max(0, int(m_pos.x - searchRadius));
-  int max_i = std::min(m_currImg->height - 1, int(m_pos.y + searchRadius));
-  int max_j = std::min(m_currImg->width - 1,  int(m_pos.x + searchRadius));
-  for (int i = min_i; i <= max_i; ++i)
-  {
-    for (int j = min_j; j <= max_j; ++j)
-    {
-      for (int k = 0; k < numberOfSamples; ++k)
-      {
-        current_correlation = CrossCorrelation::Ncc2d(
-            warpedTargets[k], m_currImg, m_pos.x, m_pos.y, i, j, ws, ws);
-        if (current_correlation > best_correlation)
-        {
-          best_correlation = current_correlation;
-          best_i = i;
-          best_j = j;
-          best_angle = k;
-        }
-      }
-    }
-  }
-  // Release images
+  int bestAngle;
+  cv::Point2i bestLocation;
+  double bestCorrelation = 0;
+  double currentCorrelation = 0;
+  // Boundary checks
+  //double search_x = m_pos.x;
+  //double search_y = m_pos.y;
+  double search_x = m_kalman.getCurrentState()[0];
+  double search_y = m_kalman.getCurrentState()[1];
+  assert(search_y - searchRadius >= 0);
+  assert(search_y + searchRadius < m_currImg->height);
+  assert(search_x - searchRadius >= 0);
+  assert(search_x + searchRadius < m_currImg->width);
+  cv::Mat searchArea = cv::Mat(cv::Mat(m_currImg),
+      cv::Rect(search_x - searchRadius - warpedTargets.back().cols,
+               search_y - searchRadius - warpedTargets.back().rows,
+               2 * searchRadius + 2*warpedTargets.back().rows,
+               2 * searchRadius + 2*warpedTargets.back().cols));
+  /*
+  cv::Mat searchArea = cv::Mat(m_currImg,
+      cv::Rect(m_pos.x - searchRadius -
+                int(0.5 * warpedTargets.back().cols + 0.5),
+               m_pos.y - searchRadius -
+                int(0.5 * warpedTargets.back().rows + 0.5),
+               2 * searchRadius + warpedTargets.back().rows - 1,
+               2 * searchRadius + warpedTargets.back().cols - 1));
+               */
+  cv::imwrite("searcharea.png", searchArea);
+  cv::Mat correlationMap;
+  cv::Point2i currentLocation;
+  cv::Mat correlationMapImage;
   for (int k = 0; k < numberOfSamples; ++k)
   {
-    cvReleaseImage(&warpedTargets[k]);
+    cv::matchTemplate(
+        searchArea, warpedTargets[k], correlationMap, CV_TM_CCOEFF_NORMED);
+    cv::minMaxLoc(
+        correlationMap, NULL, &currentCorrelation, NULL, &currentLocation);
+    correlationMapImage = correlationMap.clone();
+    correlationMap.convertTo(correlationMapImage, CV_8UC1, 255./currentCorrelation);
+    sprintf(filename2, "cr%d.png", k);
+    cv::imwrite(filename2, correlationMapImage);
+    if (currentCorrelation > bestCorrelation)
+    {
+      bestCorrelation = currentCorrelation;
+      bestLocation = currentLocation;
+      bestAngle = k;
+    }
   }
   float currentError = GetError();
-  if (best_correlation > std::max(0.55f, currentError))
+  if (bestCorrelation > std::max(0.70f, currentError))
   {
-    m_pos.x = best_j;
-    m_pos.y = best_i;
-    m_angle = anglesToTry[best_angle];
+    m_pos.x = search_x - searchRadius - 0.5 * warpedTargets.back().cols +
+      bestLocation.x;
+    m_pos.y = search_y - searchRadius - 0.5 * warpedTargets.back().rows +
+      bestLocation.y;
+      //m_angle = anglesToTry[best_angle];
+    m_angle = ComputeHeading(GetPosition());
     // It may be good to call TrackStage2 here!
-    //Activate();
+    Activate();
     return true;
   }
   else
