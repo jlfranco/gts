@@ -288,7 +288,6 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
         found2 = TrackStage2( newPos, flipCorrect, false );
         if( found2 )
         {
-            double tmpH = GetHeading();
             ncc = GetError();
             kltGaveUp = ncc < m_nccThresh;
             if ( !kltGaveUp && err > 0 )
@@ -1000,7 +999,6 @@ bool KltTracker::Relocalize(double searchRadius, double angleRange, int numberOf
     cv::imwrite(filename1, warpedTargets.back());
     anglesToTry.push_back(warpAngle);
   }
-  int bestAngle;
   cv::Point2i bestLocation;
   double bestCorrelation = 0;
   double currentCorrelation = 0;
@@ -1045,7 +1043,6 @@ bool KltTracker::Relocalize(double searchRadius, double angleRange, int numberOf
     {
       bestCorrelation = currentCorrelation;
       bestLocation = currentLocation;
-      bestAngle = k;
     }
   }
   float currentError = GetError();
