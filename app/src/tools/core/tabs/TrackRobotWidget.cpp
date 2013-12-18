@@ -55,7 +55,7 @@ static const int BI_LEVEL_DEFAULT = 128;
 static const double NCC_DEFAULT = 0.3;
 static const double RESOLUTION_DEFAULT = 15.0;
 static const double TRACKER_DEFAULT = 0;
-static const double KALMAN_TH_DEFAULT = 0;
+static const int    KALMAN_TH_DEFAULT = 0;
 
 static const int ROOM_POSITION_COLUMN = 0;
 static const int FILE_COLUMN = 1;
@@ -367,7 +367,7 @@ void TrackRobotWidget::CameraComboChanged()
     int biLevelThreshold = config.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::biLevelThreshold).ToInt();
     double nccThreshold = config.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::nccThreshold).ToDouble();
     int resolution = config.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::resolution).ToInt();
-    double kalmanTh = config.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::kalmanTh).ToDouble();
+    int kalmanTh = config.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::kalmanTh).ToInt();
 
     for (WbKeyValues::ValueIdPairList::const_iterator it = cameraMappingIds.begin(); it != cameraMappingIds.end(); ++it)
     {
@@ -415,7 +415,7 @@ void TrackRobotWidget::UseGlobalBtnClicked()
 	    m_ui->m_camResolutionSpinBox->setValue
 	        (config.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::resolution).ToInt());
 	    m_ui->m_camKalmanThSpinBox->setValue
-	        (config.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::kalmanTh).ToDouble());
+	        (config.GetKeyValue(TrackRobotSchema::GlobalTrackingParams::kalmanTh).ToInt());
 
 	    m_ui->m_camTrackerThresholdSpinBox->setEnabled(false);
 	    m_ui->m_camNccThresholdSpinBox->setEnabled(false);

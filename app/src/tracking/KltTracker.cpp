@@ -70,7 +70,7 @@ KltTracker::KltTracker( const CameraCalibration* cal,
     m_avg           ( 0 ),
     m_diff          ( 0 ),
     m_filtered      ( 0 ),
-    m_kalmanTh      ( 0.0f ),
+    m_kalmanTh      ( 0 ),
     m_history       (),
     m_cal           ( cal ),
     m_metrics       ( metrics )
@@ -254,6 +254,7 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
     char found = 0;
     bool found2 = false;
     bool kltGaveUp = false;
+
     float ncc;
     CvPoint2D32f newPos;
     static int err = 0;
@@ -617,7 +618,7 @@ bool KltTracker::TrackStage2( CvPoint2D32f newPos, bool flipCorrect, bool init )
 
 bool KltTracker::UseKalman() const
 {
-    return m_kalmanTh > 0.0f;
+    return m_kalmanTh > 0;
 }
 
 int KltTracker::KalmanLimit() const
@@ -1094,7 +1095,7 @@ void KltTracker::SetParam( paramType param, float value )
             m_nccThresh = value;
             break;
         case PARAM_KALMAN_THRESHOLD:
-            m_kalmanTh = value;
+            m_kalmanTh = (int) value;
             break;
     }
 }
