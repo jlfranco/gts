@@ -177,6 +177,7 @@ private:
     float  m_kalmanTh;
     Kalman m_kalman;
     bool   UseKalman() const;
+    int    KalmanLimit() const;
 
     // History stores the position, orientation, tracker error and time stamp.
     TrackHistory::TrackLog m_history;

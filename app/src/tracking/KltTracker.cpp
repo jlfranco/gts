@@ -241,7 +241,6 @@ void KltTracker::DoInactiveProcessing( double timeStamp )
     }
 }
 
-#define KALMAN_LIMIT 15
 /**
  Run an interation of the tracker (tracks from previous frame to current frame).
  On each new frame, be sure to call SetCurrentImage() before calling Track().
@@ -298,7 +297,7 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                 err = 0;
             }
 
-            if ( kltGaveUp && (!UseKalman() || err > KALMAN_LIMIT) )
+            if ( kltGaveUp && (!UseKalman() || err > KalmanLimit() ) )
             {
                 err = 0;
                 if ( !IsLost() )
@@ -437,7 +436,7 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                 }
                 if ( ( kltGaveUp ) || ( !kltGaveUp && m_kalman.getError() > 100 ) )
                 {
-                    if ( err++ >= KALMAN_LIMIT )
+                    if ( err++ >= KalmanLimit() )
                     {
                         LOG_WARN("Kalman giving up");
                         kalmanOk = false;
@@ -620,6 +619,11 @@ bool KltTracker::TrackStage2( CvPoint2D32f newPos, bool flipCorrect, bool init )
 bool KltTracker::UseKalman() const
 {
     return m_kalmanTh > 0.0f;
+}
+
+int KltTracker::KalmanLimit() const
+{
+    return m_kalmanTh;
 }
 
 /**
