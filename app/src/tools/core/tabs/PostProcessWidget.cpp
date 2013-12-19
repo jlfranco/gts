@@ -441,12 +441,9 @@ const ExitStatus::Flags PostProcessWidget::PostProcess( const WbConfig& postProc
         // Setup floor-coverage system
         CoverageSystem coverage( cvSize( compImg->width, compImg->height ) );
 
-        if ( floorMaskFile )
-        {
-            coverage.LoadFloorMask( floorMaskFile );
-        }
-
-        if ( coverage.GetFloorMask() )
+        if ( floorMaskFile &&
+             coverage.LoadFloorMask( floorMaskFile ) &&
+             coverage.GetFloorMask() )
         {
             // Create a fake tracker - only to compute brush bar dimensions
             LOG_INFO("TRACKER WARNINGS WHICH FOLLOW CAN BE SAFELY IGNORED.");
@@ -552,19 +549,20 @@ const ExitStatus::Flags PostProcessWidget::PostProcess( const WbConfig& postProc
             LOG_TRACE("Post Process - Coverage data written. Cleaning up");
 
             delete tracker;
+
+            PlotTrackLog( avg, floorPlanFile, trackerResultsImgFile );
+
+            LOG_TRACE("Post Process - Post processing finished.");
         }
         else
         {
+            exitStatus = ExitStatus::ERRORS_OCCURRED;
             LOG_WARN("Post Process - No coverage results computed!");
         }
 
         cvReleaseImage( &compImg );
         cvReleaseImage( &headingImg );
         cvReleaseImage( &compImgCol );
-
-        PlotTrackLog( avg, floorPlanFile, trackerResultsImgFile );
-
-        LOG_TRACE("Post Process - Post processing finished.");
     }
 
     return exitStatus;

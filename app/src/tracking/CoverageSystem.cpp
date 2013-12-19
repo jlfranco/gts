@@ -407,7 +407,6 @@ bool CoverageSystem::LoadFloorMask( const char* filename )
 
         LOG_ERROR(QObject::tr("Expected a %1x%2 grey-scale image!").arg(m_cvgMask->width)
                                                                    .arg(m_cvgMask->height));
-        assert( 0 );
         return false;
     }
 }
