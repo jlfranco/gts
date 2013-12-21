@@ -170,6 +170,23 @@
              </property>
             </widget>
            </item>
+           <item row="2" column="1">
+            <widget class="QSpinBox" name="m_postProcessKalmanLimitSpinBox">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Discard sections of track with more than this number of successive frames where track position and heading was predicted by Kalman.&lt;/p&gt;&lt;p&gt;Set to 0 to ignore predicted frames.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_2">
+             <property name="text">
+              <string>Kalman Limit</string>
+             </property>
+            </widget>
+           </item>
           </layout>
          </item>
         </layout>

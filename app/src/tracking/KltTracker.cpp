@@ -465,7 +465,7 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
         assert( error >= -1.0 );
         assert( error <= 1.0 );
 
-        m_history.emplace_back( TrackEntry( GetPosition(), GetHeading(), GetError(), timestampInMillisecs, warpGradient ) );
+        m_history.emplace_back( TrackEntry( GetPosition(), GetHeading(), kltGaveUp?-1:GetError(), timestampInMillisecs, warpGradient ) );
     }
 
     return found || found2;

@@ -71,6 +71,10 @@ namespace ScanUtility
 
     void ConvertToRelativeLog( const TrackHistory::TrackLog& in,
                                TrackHistory::TrackLog& out );
+
+    void RemoveLongPrediction( const TrackHistory::TrackLog& in,
+                               TrackHistory::TrackLog& out,
+                               unsigned int limit );
 }
 
 #endif // SCANUTILITY_H

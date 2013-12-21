@@ -402,10 +402,14 @@ const ExitStatus::Flags PostProcessWidget::PostProcess( const WbConfig& postProc
 
         ScanUtility::LogSwapHandedness( avg );
 
+        TrackHistory::TrackLog avgCleaned;
+        unsigned int kalmanLimit = m_ui->m_postProcessKalmanLimitSpinBox->value();
+        ScanUtility::RemoveLongPrediction( avg, avgCleaned, kalmanLimit );
+
         if ( relativeLogFile )
         {
             TrackHistory::TrackLog rel;
-            ScanUtility::ConvertToRelativeLog( avg, rel );
+            ScanUtility::ConvertToRelativeLog( avgCleaned, rel );
             TrackHistory::WriteHistoryLog( relativeLogFile, rel);
         }
 
@@ -436,7 +440,7 @@ const ExitStatus::Flags PostProcessWidget::PostProcess( const WbConfig& postProc
         LOG_TRACE("Successfully read all inputs, processing");
 
         // Segmentation and coverage.
-        TrackHistory::TrackLog avgPx = avg;
+        TrackHistory::TrackLog avgPx = avgCleaned;
 
         // Setup floor-coverage system
         CoverageSystem coverage( cvSize( compImg->width, compImg->height ) );
@@ -550,7 +554,7 @@ const ExitStatus::Flags PostProcessWidget::PostProcess( const WbConfig& postProc
 
             delete tracker;
 
-            PlotTrackLog( avg, floorPlanFile, trackerResultsImgFile );
+            PlotTrackLog( avgCleaned, floorPlanFile, trackerResultsImgFile );
 
             LOG_TRACE("Post Process - Post processing finished.");
         }

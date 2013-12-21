@@ -24,6 +24,8 @@
 #include "CameraCalibration.h"
 #include "OpenCvUtility.h"
 
+#include "Logging.h"
+
 #include <opencv/highgui.h>
 
 namespace ScanUtility
@@ -317,5 +319,92 @@ namespace ScanUtility
                                      in[i].wgm() );
 		    }
 	    }
+    }
+
+    /**
+	    Will remove segments of the log that have more than @a limit successive
+      estimated entries (entries predicted by the kalman filter but not really
+      observed).
+      The idea is to use the kalman filter only when the robot is lost for a short
+      period of time, for example a straight line under a small chair. If it goes
+      under a table and turns after hitting an obstacle while not visible then the
+      track estimation will be unreliable and should not be used to compute coverage.
+    **/
+    void RemoveLongPrediction( const TrackHistory::TrackLog& in,
+                               TrackHistory::TrackLog& out,
+                               unsigned int limit )
+    {
+        out.clear();
+        unsigned int
+            predStart = 0,
+            predEnd   = 0,
+            outIndex  = 0;
+
+        if ( limit == 0 || in.size() <= 0 )
+        {
+            out = in;
+            return;
+        }
+
+        out.resize( in.size() ); // may have to resize again later
+
+        for	( unsigned int i=0; i<in.size(); ++i )
+        {
+            if ( i < in.size() - 1 && in[i].GetError() < 0.f )
+            {
+                /*
+                  this is a predicted entry, keep
+                  track of its length.
+                */
+                predEnd = i;
+            }
+            else
+            {
+                /*
+                  this is either:
+                  - the end of a succession of predicted values.
+                  - the first element of the in track.
+                  - the last element of the in track.
+                */
+                if ( predEnd != predStart )
+                {
+                    if ( predEnd - predStart <= limit )
+                    {
+                        /*
+                          the length is acceptable, copy to predicted
+                          values to the out data.
+                        */
+                        for ( unsigned int iCopy = predStart + 1; iCopy <= predEnd; iCopy++ )
+                        {
+                            out[outIndex++] = TrackEntry(
+                                                         in[iCopy].GetPosition(),
+                                                         in[iCopy].GetOrientation(),
+                                                         in[iCopy].GetError(),
+                                                         in[iCopy].GetTimeStamp(),
+                                                         in[iCopy].wgm()
+                                                         );
+                        }
+                        LOG_INFO(QObject::tr("RemoveLongPrediction - Accepted predicted range [%1,%2]")
+                                 .arg(predStart+1)
+                                 .arg(predEnd));
+                    }
+                    else
+                    {
+                        LOG_INFO(QObject::tr("RemoveLongPrediction - Discarded predicted range [%1,%2]")
+                                 .arg(predStart+1)
+                                 .arg(predEnd));
+                    }
+                }
+                out[outIndex++] = TrackEntry(
+                                             in[i].GetPosition(),
+                                             in[i].GetOrientation(),
+                                             in[i].GetError(),
+                                             in[i].GetTimeStamp(),
+                                             in[i].wgm());
+                predEnd   = i;
+                predStart = i;
+            }
+        }
+        out.resize( outIndex ); // trim out if sections were discarded
     }
 }
