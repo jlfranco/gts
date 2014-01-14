@@ -984,10 +984,6 @@ bool KltTracker::Relocalize(double searchRadius, double angleRange, int numberOf
   cv::Mat rotMatrix;
   std::vector<cv::Mat> warpedTargets;
   double startingAngle = currentAngle - 0.5 * angleRange;
-  //Temporary! Also, every imwrite
-  char filename1[20];
-  char filename2[20];
-  // </Temporary>
   for (int i = 0; i < numberOfSamples; ++i)
   {
     warpAngle = startingAngle + i * angleRange / (numberOfSamples - 1);
@@ -996,8 +992,6 @@ bool KltTracker::Relocalize(double searchRadius, double angleRange, int numberOf
     cv::warpAffine(targetAsMat, warpedTargets.back(), rotMatrix,
         cv::Size(m_targetImg->width + x_pad, m_targetImg->height + y_pad),
         cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar(128));
-    sprintf(filename1, "wt%d.png", i);
-    cv::imwrite(filename1, warpedTargets.back());
     anglesToTry.push_back(warpAngle);
   }
   cv::Point2i bestLocation;
@@ -1026,20 +1020,14 @@ bool KltTracker::Relocalize(double searchRadius, double angleRange, int numberOf
                2 * searchRadius + warpedTargets.back().rows - 1,
                2 * searchRadius + warpedTargets.back().cols - 1));
                */
-  cv::imwrite("searcharea.png", searchArea);
   cv::Mat correlationMap;
   cv::Point2i currentLocation;
-  cv::Mat correlationMapImage;
   for (int k = 0; k < numberOfSamples; ++k)
   {
     cv::matchTemplate(
         searchArea, warpedTargets[k], correlationMap, CV_TM_CCOEFF_NORMED);
     cv::minMaxLoc(
         correlationMap, NULL, &currentCorrelation, NULL, &currentLocation);
-    correlationMapImage = correlationMap.clone();
-    correlationMap.convertTo(correlationMapImage, CV_8UC1, 255./currentCorrelation);
-    sprintf(filename2, "cr%d.png", k);
-    cv::imwrite(filename2, correlationMapImage);
     if (currentCorrelation > bestCorrelation)
     {
       bestCorrelation = currentCorrelation;
