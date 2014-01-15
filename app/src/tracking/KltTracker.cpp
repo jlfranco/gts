@@ -333,14 +333,14 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
             CvPoint2D32f pos = GetPosition();
             measurement[0] = pos.x;
             measurement[1] = pos.y;
-            measurement[2] = GetHeading(); // Care must be taken with angle wrapping
+            //            measurement[2] = GetHeading(); // Care must be taken with angle wrapping
             if ( !m_kalman.isInit() )
             {
-                m_kalman.init( measurement, timestampInMillisecs );
+                m_kalman.init( measurement );
             }
             else
             {
-                kalmanOk = m_kalman.predict( timestampInMillisecs );
+                kalmanOk = m_kalman.predict();
                 bool recovered = false;
                 if ( kltGaveUp )
                 {
@@ -366,7 +366,7 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                         // use values set by LossRecovery
                         measurement[0] = m_pos.x;
                         measurement[1] = m_pos.y;
-                        measurement[2] = (double) GetHeading(); // Angle wrapping warning!
+                        //                        measurement[2] = (double) GetHeading(); // Angle wrapping warning!
                     }
                     if ( !kltGaveUp || recovered )
                     {
@@ -406,10 +406,6 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                         <<
                         "\t"
                         <<
-                        state[4]
-                        <<
-                        "\t"
-                        <<
                         kalmanErr
                         <<
                         "\t"
@@ -428,10 +424,10 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
 #endif //KALMAN_DEBUG
                     if (kltGaveUp && !recovered)
                     {
-                        CvPoint3D32f currPos  = m_kalman.getPosition();
+                        CvPoint2D32f currPos  = m_kalman.getPosition();
                         m_pos.x = currPos.x;
                         m_pos.y = currPos.y;
-                        m_angle = currPos.z;
+                        m_angle = ComputeHeading(currPos);
                     }
                 }
                 if ( ( kltGaveUp ) || ( !kltGaveUp && m_kalman.getError() > 100 ) )
@@ -968,8 +964,9 @@ bool KltTracker::TargetSearch( const IplImage* mask )
 bool KltTracker::Relocalize(double searchRadius, double angleRange, int numberOfSamples)
 {
   assert(numberOfSamples > 1 && "Number of samples must be greater than one");
+  assert(UseKalman() && "Relocalize must be used with kalman, otherwise use LossRecovery");
   // Convert angle to degrees
-  double currentAngle = 180 + 180 * (m_kalman.getCurrentState()[2] -
+  double currentAngle = 180 + 180 * (m_angle -
                                m_metrics->GetTargetRotationRad()) / M_PI;
   double warpAngle;
   int x_pad = 8;
