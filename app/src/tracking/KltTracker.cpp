@@ -429,7 +429,7 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                         m_pos.y = currPos.y;
                     }
                 }
-                if ( ( kltGaveUp ) || ( !kltGaveUp && m_kalman.getError() > 100 ) )
+                if ( kltGaveUp || ( m_kalman.getError() > 100 ) )
                 {
                     if ( err++ >= KalmanLimit() )
                     {
