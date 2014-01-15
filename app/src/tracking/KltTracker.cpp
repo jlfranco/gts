@@ -293,7 +293,8 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
             kltGaveUp = ncc < m_nccThresh;
             if ( !kltGaveUp && err > 0 )
             {
-                LOG_INFO("klt back, restarting kalman error count.");
+                LOG_INFO(QObject::tr("klt back, restarting kalman error count [t(ms):%1]")
+                         .arg(timestampInMillisecs));;
                 err = 0;
             }
 
@@ -346,7 +347,6 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                 {
                     /*
                     LOG_TRACE("Attempting LossRecovery before kalman update...");
-                    recovered = LossRecovery();
                     */
                     recovered = Relocalize(4.*(err+1), err < 5 ? 15 : (err < 10 ? 30: 45), 11);
                     if ( recovered )
@@ -363,7 +363,7 @@ bool KltTracker::Track( double timestampInMillisecs, bool flipCorrect, bool init
                 {
                     if ( kltGaveUp && recovered )
                     {
-                        // use values set by LossRecovery
+                        // use values set by Relocalize
                         measurement[0] = m_pos.x;
                         measurement[1] = m_pos.y;
                         //                        measurement[2] = (double) GetHeading(); // Angle wrapping warning!
