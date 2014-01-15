@@ -89,7 +89,7 @@ public:
             Kalman::MVec robPos;
             robPos[0] = robotPosition.x;
             robPos[1] = robotPosition.y;
-            robPos[2] = ComputeHeading( robotPosition );
+            //            robPos[2] = ComputeHeading( robotPosition );
             m_kalman.setPosition( robPos );
         }
 
