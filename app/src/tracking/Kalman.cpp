@@ -33,18 +33,20 @@ void Kalman::init( MVec measurement )
     setIdentity(KF.measurementMatrix);
 
     //    setIdentity(KF.processNoiseCov, cv::Scalar::all(1e-4));
-    KF.processNoiseCov.at<float>(0, 0) = 1.5; // pixels
-    KF.processNoiseCov.at<float>(1, 1) = 1.5; // pixels
-    KF.processNoiseCov.at<float>(2, 2) = M_PI/40.;
-    KF.processNoiseCov.at<float>(3, 3) = 4.;
+    KF.processNoiseCov.at<float>(0, 0) = 1.5f; // pixels
+    KF.processNoiseCov.at<float>(1, 1) = 1.5f; // pixels
+    KF.processNoiseCov.at<float>(2, 2) = 4.f;
+    KF.processNoiseCov.at<float>(3, 3) = 4.f;
 
-    setIdentity(KF.measurementNoiseCov, cv::Scalar::all(0.5));
+    //    setIdentity(KF.measurementNoiseCov, cv::Scalar::all(0.5));
+    KF.measurementNoiseCov.at<float>(0,0) = 0.5f;
+    KF.measurementNoiseCov.at<float>(1,1) = 0.5f;
 
     //    setIdentity(KF.errorCovPost, cv::Scalar::all(.1));
     KF.errorCovPost.at<float>(0, 0) = 1.5f;
     KF.errorCovPost.at<float>(1, 1) = 1.5f;
-    KF.errorCovPost.at<float>(2, 2) = M_PI/16.;
-    KF.errorCovPost.at<float>(3, 3) = 20.;
+    KF.errorCovPost.at<float>(2, 2) = 20.f;
+    KF.errorCovPost.at<float>(3, 3) = 20.f;
 
     fprintf( stderr, "Kalman::init\n");
     setPosition( measurement );
