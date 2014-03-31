@@ -18,7 +18,11 @@ __CMake__ (2.8.10.1)
 
 __Qt__ (4.8.1)
 	
-	sudo apt-get install libqt4-dev
+	sudo apt-get install libqt4-dev qt4-dev-tools
+	
+__Unicap__ (0.9.12)
+
+	sudo apt-get install libunicap2-dev
 
 __OpenCV__ (2.4.6)
 
@@ -28,9 +32,7 @@ __OpenCV__ (2.4.6)
 	cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/path/to/opencv/install
 	cmake --build . --target install
 
-__Unicap__ (0.9.12)
 
-	sudo apt-get install libunicap2-dev
 
 ### Windows
 
