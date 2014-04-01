@@ -68,7 +68,7 @@ __Linux__
 
 	$ mkdir build && cd build
 	$ cmake [options] ../
-	    e.g. cmake -DOpenCV_ROOT_DIR=/path/to/opencv/install -DCMAKE_BUILD_TYPE=Debug -DGTS_TESTS=ON -DCMAKE_INSTALL_PREFIX=/home/username/gts/ ../
+	    e.g. cmake -DOpenCV_ROOT_DIR=/path/to/opencv/install -DCMAKE_BUILD_TYPE=Debug -DGTS_TESTS=ON ../
 	$ cmake --build . --target install
 
 __Windows (MinGW)__
