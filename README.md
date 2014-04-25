@@ -29,7 +29,7 @@ __OpenCV__ (2.4.6)
 	git clone https://github.com/Itseez/opencv.git 
 	git checkout 2.4.6
 	mkdir build && cd build
-	cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/path/to/opencv/install
+	cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/path/to/opencv/install ..
 	cmake --build . --target install
 
 
