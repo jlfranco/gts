@@ -41,6 +41,14 @@ __OpenCV__ (2.4.6)
 * [Xvid](http://www.xvid.org/) (1.3.2)
 
 * [OpenCV](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/) (2.4.6)
+__OpenCV__ (2.4.6)
+
+	git clone https://github.com/Itseez/opencv.git 
+	git checkout 2.4.6
+	mkdir build && cd build
+	cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/path/to/opencv/install ..
+	cmake --build .
+	cmake --target . install
 
 __MinGW Only__
 
