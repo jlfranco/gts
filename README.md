@@ -43,6 +43,7 @@ __Compiling OpenCV on Windows__ (2.4.6)
 * [OpenCV](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/) (2.4.6)
  
 __OpenCV__ (2.4.6)
+
 	cd C:\
 	git clone https://github.com/Itseez/opencv.git 
 	git checkout 2.4.6
