@@ -24,7 +24,7 @@ __Unicap__ (0.9.12)
 
 	sudo apt-get install libunicap2-dev
 
-__Compiling OpenCV on Windows__ (2.4.6)
+__Installing and compiling OpenCV on Linux__ (2.4.6)
 
 	git clone https://github.com/Itseez/opencv.git 
 	git checkout 2.4.6
