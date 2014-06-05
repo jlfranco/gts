@@ -50,8 +50,7 @@ __OpenCV__ (2.4.6)
 	cd opencv
 	mkdir build && cd build
 	cmake -G"MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="C:\opencv\install" ..
-	cmake --build .
-	cmake --target . install
+	cmake --build . --target install
 
 __MinGW Only__
 
